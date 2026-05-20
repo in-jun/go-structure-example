@@ -20,6 +20,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/config"
 	"github.com/in-jun/go-structure-example/internal/shared/crypto"
 	"github.com/in-jun/go-structure-example/internal/shared/database"
+	"github.com/in-jun/go-structure-example/internal/shared/health"
 	"github.com/in-jun/go-structure-example/internal/shared/logging"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
 	todoapp "github.com/in-jun/go-structure-example/internal/todo/application"
@@ -111,6 +112,7 @@ func main() {
 	userHandler := userhttp.NewHandler(userService, userService, validateToken)
 	todoHandler := todohttp.NewHandler(todoService, todoService, validateToken)
 
+	healthChecker := health.NewChecker(mysqlDB).WithRedis(redisClient)
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.RequestID())
@@ -119,6 +121,8 @@ func main() {
 	router.Use(middleware.CORS())
 	router.Use(middleware.RateLimit(redisClient, config.AppConfig.RateLimitBurst))
 	router.Use(middleware.ErrorHandler())
+
+	healthChecker.RegisterRoutes(router)
 
 	api := router.Group("/api/v1")
 	{

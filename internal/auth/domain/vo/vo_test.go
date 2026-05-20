@@ -60,3 +60,42 @@ func TestNewLoginVO(t *testing.T) {
 		})
 	}
 }
+
+func TestNewRefreshTokenVO(t *testing.T) {
+	if _, err := NewRefreshTokenVO(""); err == nil {
+		t.Error("expected error for empty token, got nil")
+	}
+	v, err := NewRefreshTokenVO("some-token")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if v.Token != "some-token" {
+		t.Errorf("expected 'some-token', got %q", v.Token)
+	}
+}
+
+func TestNewTokenStringVO(t *testing.T) {
+	if _, err := NewTokenStringVO(""); err == nil {
+		t.Error("expected error for empty token, got nil")
+	}
+	v, err := NewTokenStringVO("bearer-token")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if v.Token != "bearer-token" {
+		t.Errorf("expected 'bearer-token', got %q", v.Token)
+	}
+}
+
+func TestNewUserIDVO(t *testing.T) {
+	if _, err := NewUserIDVO(0); err == nil {
+		t.Error("expected error for zero ID, got nil")
+	}
+	v, err := NewUserIDVO(42)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if v.ID != 42 {
+		t.Errorf("expected ID 42, got %d", v.ID)
+	}
+}
