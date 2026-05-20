@@ -11,6 +11,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/user/domain/entity"
 )
 
+var _ domain.UserRepository = (*userRepository)(nil)
+
 type userRepository struct {
 	db *sql.DB
 }

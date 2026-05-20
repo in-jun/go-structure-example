@@ -13,6 +13,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 )
 
+var _ domain.TokenRepository = (*tokenRepository)(nil)
+
 type tokenRepository struct {
 	client *goredis.Client
 }

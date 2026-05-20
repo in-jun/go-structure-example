@@ -10,6 +10,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
 )
 
+var _ domain.TodoRepository = (*todoRepository)(nil)
+
 type todoRepository struct {
 	db *sql.DB
 }

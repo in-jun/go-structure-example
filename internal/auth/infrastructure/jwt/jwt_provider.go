@@ -10,6 +10,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/auth/domain"
 )
 
+var _ domain.TokenGenerator = (*provider)(nil)
+
 type claims struct {
 	UserID uint `json:"user_id"`
 	jwt.RegisteredClaims
