@@ -9,13 +9,25 @@ services:
       JWT_SECRET: "change-me-in-production"
       JWT_ACCESS_EXPIRY: "15m"
       JWT_REFRESH_EXPIRY: "168h"
-      DB_HOST: mysql
-      DB_PORT: "3306"
-      DB_NAME: app_db
-      DB_USER: app
-      DB_PASSWORD: app
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: app_db
+      MYSQL_USERNAME: app
+      MYSQL_PASSWORD: app
+      MYSQL_MAX_OPEN_CONNS: "25"
+      MYSQL_MAX_IDLE_CONNS: "10"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      CORS_ALLOW_ORIGINS: "*"
+      SHUTDOWN_TIMEOUT: "10s"
+      REQUEST_TIMEOUT: "30s"
+      RATE_LIMIT_BURST: "100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     depends_on:
       mysql:
         condition: service_healthy

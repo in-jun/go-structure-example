@@ -1,7 +1,7 @@
 VERSION  ?= dev
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 
-.PHONY: all build test test-cover lint vet fmt docker-up docker-down clean
+.PHONY: all build test test-cover lint vet fmt docker-up docker-down docker-build clean health
 
 all: lint test build
 
@@ -32,6 +32,9 @@ fmt:
 	gofmt -w .
 
 ## Docker
+docker-build:
+	docker compose build --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT)
+
 docker-up:
 	docker compose up --build -d
 
@@ -42,5 +45,9 @@ docker-logs:
 	docker compose logs -f
 
 ## Misc
+health:
+	@curl -s localhost:8080/health/live | jq .
+	@curl -s localhost:8080/health/ready | jq .
+
 clean:
 	rm -rf bin/ coverage.out coverage.html
