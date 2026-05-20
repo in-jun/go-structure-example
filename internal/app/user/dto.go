@@ -9,7 +9,15 @@ type UserResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type UpdateUserRequest struct {
-	Name     string `json:"name" binding:"required"`
-	Password string `json:"password" binding:"required,min=6"`
+type UpdateProfileRequest struct {
+	Name string `json:"name" binding:"required"`
+}
+
+type UpdatePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required,min=6"`
+	NewPassword     string `json:"new_password" binding:"required,min=6"`
+}
+
+type MessageResponse struct {
+	Message string `json:"message"`
 }

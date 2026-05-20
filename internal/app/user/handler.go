@@ -10,57 +10,74 @@ import (
 )
 
 type Handler struct {
-	service *Service
+	service Service
 }
 
-func NewHandler(service *Service) *Handler {
+func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	users := r.Group("/users")
+	users.Use(middleware.Auth())
 	{
-		users.Use(middleware.Auth())
-		users.GET("/me", h.GetMyInfo)
-		users.PUT("/me", h.UpdateMyInfo)
-		users.DELETE("/me", h.DeleteMyAccount)
+		users.GET("/me", h.GetMe)
+		users.PATCH("/me/profile", h.UpdateProfile)
+		users.PATCH("/me/password", h.UpdatePassword)
+		users.DELETE("/me", h.DeleteMe)
 	}
 }
 
-func (h *Handler) GetMyInfo(c *gin.Context) {
+func (h *Handler) GetMe(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	user, err := h.service.GetByID(c.Request.Context(), userID)
+	u, err := h.service.GetByID(c.Request.Context(), userID)
 	if err != nil {
 		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, u)
 }
 
-func (h *Handler) UpdateMyInfo(c *gin.Context) {
-	var req UpdateUserRequest
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(errors.BadRequest("Invalid request format"))
 		return
 	}
 
 	userID := c.GetUint("user_id")
-	if err := h.service.Update(c.Request.Context(), userID, req); err != nil {
+	if err := h.service.UpdateProfile(c.Request.Context(), userID, req); err != nil {
 		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
+	c.JSON(http.StatusOK, MessageResponse{Message: "Profile updated successfully"})
 }
 
-func (h *Handler) DeleteMyAccount(c *gin.Context) {
+func (h *Handler) UpdatePassword(c *gin.Context) {
+	var req UpdatePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(errors.BadRequest("Invalid request format"))
+		return
+	}
+
+	userID := c.GetUint("user_id")
+	if err := h.service.UpdatePassword(c.Request.Context(), userID, req); err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, MessageResponse{Message: "Password updated successfully"})
+}
+
+func (h *Handler) DeleteMe(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	if err := h.service.Delete(c.Request.Context(), userID); err != nil {
 		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
+	c.JSON(http.StatusOK, MessageResponse{Message: "Account deleted successfully"})
 }

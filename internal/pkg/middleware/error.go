@@ -13,14 +13,10 @@ func ErrorHandler() gin.HandlerFunc {
 		if len(c.Errors) > 0 {
 			err := c.Errors.Last().Err
 			if customErr, ok := err.(errors.CustomError); ok {
-				c.JSON(customErr.Status, gin.H{
-					"error": customErr.Message,
-				})
+				c.JSON(customErr.Status, customErr)
 				return
 			}
-			c.JSON(500, gin.H{
-				"error": "Internal Server Error",
-			})
+			c.JSON(500, errors.Internal("Internal Server Error"))
 		}
 	}
 }

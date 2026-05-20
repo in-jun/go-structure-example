@@ -12,25 +12,34 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Service struct {
+type Service interface {
+	Register(ctx context.Context, req RegisterRequest) error
+	Login(ctx context.Context, req LoginRequest) (*AuthResponse, error)
+	Refresh(ctx context.Context, req RefreshRequest) (*AuthResponse, error)
+	Logout(ctx context.Context, userID uint, refreshToken, jti string) error
+}
+
+var _ Service = (*service)(nil)
+
+type service struct {
 	authRepo Repository
 	userRepo user.Repository
 }
 
-func NewService(authRepo Repository, userRepo user.Repository) *Service {
-	return &Service{
+func NewService(authRepo Repository, userRepo user.Repository) Service {
+	return &service{
 		authRepo: authRepo,
 		userRepo: userRepo,
 	}
 }
 
-func (s *Service) Register(ctx context.Context, req RegisterRequest) error {
-	existingUser, err := s.userRepo.FindByEmail(ctx, req.Email)
+func (s *service) Register(ctx context.Context, req RegisterRequest) error {
+	existing, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return err
 	}
-	if existingUser != nil {
-		return errors.BadRequest("Email already registered")
+	if existing != nil {
+		return errors.Conflict("Email already registered")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -38,42 +47,39 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) error {
 		return errors.Internal("Failed to hash password")
 	}
 
-	newUser := &user.User{
+	return s.userRepo.Save(ctx, &user.User{
 		Email:    req.Email,
 		Password: string(hashedPassword),
 		Name:     req.Name,
-	}
-
-	return s.userRepo.Save(ctx, newUser)
+	})
 }
 
-func (s *Service) Login(ctx context.Context, req LoginRequest) (*AuthResponse, error) {
-	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+func (s *service) Login(ctx context.Context, req LoginRequest) (*AuthResponse, error) {
+	u, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, err
 	}
-	if user == nil {
+	if u == nil {
 		return nil, errors.Unauthorized("Invalid credentials")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(req.Password)); err != nil {
 		return nil, errors.Unauthorized("Invalid credentials")
 	}
 
-	return s.generateTokens(ctx, user.ID)
+	return s.generateTokens(ctx, u.ID)
 }
 
-func (s *Service) Refresh(ctx context.Context, req RefreshRequest) (*AuthResponse, error) {
-	oldToken, err := s.authRepo.FindByToken(ctx, req.RefreshToken)
+func (s *service) Refresh(ctx context.Context, req RefreshRequest) (*AuthResponse, error) {
+	old, err := s.authRepo.FindByToken(ctx, req.RefreshToken)
 	if err != nil {
 		return nil, err
 	}
-	if oldToken == nil {
+	if old == nil {
 		return nil, errors.Unauthorized("Invalid refresh token")
 	}
 
-	if time.Now().After(oldToken.ExpiresAt) {
-		s.authRepo.DeleteByToken(ctx, req.RefreshToken)
+	if time.Now().After(old.ExpiresAt()) {
 		return nil, errors.Unauthorized("Refresh token expired")
 	}
 
@@ -81,43 +87,45 @@ func (s *Service) Refresh(ctx context.Context, req RefreshRequest) (*AuthRespons
 		return nil, err
 	}
 
-	return s.generateTokens(ctx, oldToken.UserID)
+	return s.generateTokens(ctx, old.UserID())
 }
 
-func (s *Service) Logout(ctx context.Context, userID uint) error {
-	return s.authRepo.DeleteByUserId(ctx, userID)
+func (s *service) Logout(ctx context.Context, userID uint, refreshToken, jti string) error {
+	if err := s.authRepo.DeleteByToken(ctx, refreshToken); err != nil {
+		return err
+	}
+
+	expiry, err := time.ParseDuration(config.AppConfig.JWTAccessExpiry)
+	if err != nil {
+		return errors.Internal("Invalid access token expiry configuration")
+	}
+
+	return s.authRepo.BlacklistAccessToken(ctx, jti, expiry)
 }
 
-func (s *Service) generateTokens(ctx context.Context, userID uint) (*AuthResponse, error) {
+func (s *service) generateTokens(ctx context.Context, userID uint) (*AuthResponse, error) {
 	accessToken, err := jwt.GenerateAccessToken(userID)
 	if err != nil {
 		return nil, errors.Internal("Failed to generate access token")
 	}
 
-	refreshToken, err := jwt.GenerateRefreshToken()
+	refreshExpiry, err := time.ParseDuration(config.AppConfig.JWTRefreshExpiry)
+	if err != nil {
+		return nil, errors.Internal("Invalid refresh token expiry configuration")
+	}
+
+	rt, err := NewRefreshToken(userID, time.Now().Add(refreshExpiry))
 	if err != nil {
 		return nil, errors.Internal("Failed to generate refresh token")
 	}
 
-	duration, err := time.ParseDuration(config.AppConfig.JWTRefreshExpiry)
-	if err != nil {
-		return nil, errors.Internal("Invalid refresh token expiry duration")
-	}
-
-	if err := s.authRepo.Save(ctx, &RefreshToken{
-		RefreshToken: refreshToken,
-		UserID:       userID,
-		ExpiresAt:    time.Now().Add(duration),
-	}); err != nil {
+	if err := s.authRepo.Save(ctx, rt); err != nil {
 		return nil, err
 	}
 
-	accessExpiry, _ := time.ParseDuration(config.AppConfig.JWTAccessExpiry)
-	expiresIn := int(accessExpiry.Seconds())
-
 	return &AuthResponse{
 		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    expiresIn,
+		RefreshToken: rt.Token(),
+		ExpiresIn:    jwt.AccessExpirySeconds(),
 	}, nil
 }

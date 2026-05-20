@@ -11,20 +11,20 @@ import (
 )
 
 type Handler struct {
-	service *Service
+	service Service
 }
 
-func NewHandler(service *Service) *Handler {
+func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	todos := r.Group("/todos")
+	todos.Use(middleware.Auth())
 	{
-		todos.Use(middleware.Auth())
 		todos.GET("", h.GetList)
 		todos.POST("", h.Create)
-		todos.GET("/:id", h.GetTodoDetail)
+		todos.GET("/:id", h.Get)
 		todos.PUT("/:id", h.Update)
 		todos.PATCH("/:id/status", h.UpdateStatus)
 		todos.DELETE("/:id", h.Delete)
@@ -62,6 +62,23 @@ func (h *Handler) GetList(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+func (h *Handler) Get(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.Error(errors.BadRequest("Invalid todo ID"))
+		return
+	}
+
+	userID := c.GetUint("user_id")
+	res, err := h.service.GetByID(c.Request.Context(), userID, uint(id))
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -82,23 +99,6 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
-}
-
-func (h *Handler) GetTodoDetail(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		c.Error(errors.BadRequest("Invalid todo ID"))
-		return
-	}
-
-	userID := c.GetUint("user_id")
-	todo, err := h.service.GetByID(c.Request.Context(), userID, uint(id))
-	if err != nil {
-		c.Error(err)
-		return
-	}
-
-	c.JSON(http.StatusOK, todo)
 }
 
 func (h *Handler) UpdateStatus(c *gin.Context) {

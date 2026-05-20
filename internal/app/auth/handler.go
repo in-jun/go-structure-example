@@ -10,10 +10,10 @@ import (
 )
 
 type Handler struct {
-	service *Service
+	service Service
 }
 
-func NewHandler(service *Service) *Handler {
+func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
@@ -39,7 +39,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{Message: "Registration successful"})
+	c.JSON(http.StatusCreated, MessageResponse{Message: "Registration successful"})
 }
 
 func (h *Handler) Login(c *gin.Context) {
@@ -75,9 +75,16 @@ func (h *Handler) Refresh(c *gin.Context) {
 }
 
 func (h *Handler) Logout(c *gin.Context) {
-	userID := c.GetUint("user_id")
+	var req LogoutRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(errors.BadRequest("Invalid request format"))
+		return
+	}
 
-	if err := h.service.Logout(c.Request.Context(), userID); err != nil {
+	userID := c.GetUint("user_id")
+	jti := c.GetString("jti")
+
+	if err := h.service.Logout(c.Request.Context(), userID, req.RefreshToken, jti); err != nil {
 		c.Error(err)
 		return
 	}

@@ -6,138 +6,127 @@ import (
 	"github.com/in-jun/go-structure-example/internal/pkg/utils/errors"
 )
 
-type Service struct {
+type Service interface {
+	Create(ctx context.Context, userID uint, req CreateTodoRequest) (*TodoResponse, error)
+	GetList(ctx context.Context, userID uint, page, limit int) (*TodoListResponse, error)
+	GetByID(ctx context.Context, userID, todoID uint) (*TodoResponse, error)
+	Update(ctx context.Context, userID, todoID uint, req UpdateTodoRequest) error
+	UpdateStatus(ctx context.Context, userID, todoID uint, req UpdateTodoStatusRequest) error
+	Delete(ctx context.Context, userID, todoID uint) error
+}
+
+var _ Service = (*service)(nil)
+
+type service struct {
 	repo Repository
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo Repository) Service {
+	return &service{repo: repo}
 }
 
-func (s *Service) Create(ctx context.Context, userID uint, req CreateTodoRequest) (*TodoResponse, error) {
-	todo := &Todo{
+func (s *service) Create(ctx context.Context, userID uint, req CreateTodoRequest) (*TodoResponse, error) {
+	t := &Todo{
 		UserID:      userID,
 		Title:       req.Title,
 		Description: req.Description,
 		DueDate:     req.DueDate,
-		Status:      "pending",
+		Status:      StatusPending,
 	}
 
-	if err := s.repo.Save(ctx, todo); err != nil {
+	if err := s.repo.Save(ctx, t); err != nil {
 		return nil, err
 	}
 
-	return &TodoResponse{
-		ID:          todo.ID,
-		Title:       todo.Title,
-		Description: todo.Description,
-		Status:      todo.Status,
-		DueDate:     todo.DueDate,
-		CreatedAt:   todo.CreatedAt,
-		UpdatedAt:   todo.UpdatedAt,
-	}, nil
+	return toResponse(t), nil
 }
 
-func (s *Service) GetList(ctx context.Context, userID uint, page, limit int) (*TodoListResponse, error) {
+func (s *service) GetList(ctx context.Context, userID uint, page, limit int) (*TodoListResponse, error) {
 	todos, total, err := s.repo.FindByUserId(ctx, userID, page, limit)
 	if err != nil {
 		return nil, err
 	}
 
-	var response []TodoResponse
-	for _, todo := range todos {
-		response = append(response, TodoResponse{
-			ID:          todo.ID,
-			Title:       todo.Title,
-			Description: todo.Description,
-			Status:      todo.Status,
-			DueDate:     todo.DueDate,
-			CreatedAt:   todo.CreatedAt,
-			UpdatedAt:   todo.UpdatedAt,
-		})
+	response := make([]TodoResponse, 0, len(todos))
+	for _, t := range todos {
+		response = append(response, *toResponse(t))
 	}
 
-	return &TodoListResponse{
-		Todos: response,
-		Total: total,
-	}, nil
+	return &TodoListResponse{Todos: response, Total: total}, nil
 }
 
-func (s *Service) GetByID(ctx context.Context, userID, todoID uint) (*TodoResponse, error) {
-	todo, err := s.repo.FindById(ctx, todoID)
+func (s *service) GetByID(ctx context.Context, userID, todoID uint) (*TodoResponse, error) {
+	t, err := s.repo.FindById(ctx, todoID)
 	if err != nil {
 		return nil, err
 	}
-	if todo == nil {
+	if t == nil {
 		return nil, errors.NotFound("Todo not found")
 	}
-
-	if todo.UserID != userID {
+	if t.UserID != userID {
 		return nil, errors.Forbidden("Not authorized to access this todo")
 	}
 
-	return &TodoResponse{
-		ID:          todo.ID,
-		Title:       todo.Title,
-		Description: todo.Description,
-		Status:      todo.Status,
-		DueDate:     todo.DueDate,
-		CreatedAt:   todo.CreatedAt,
-		UpdatedAt:   todo.UpdatedAt,
-	}, nil
+	return toResponse(t), nil
 }
 
-func (s *Service) Update(ctx context.Context, userID, todoID uint, req UpdateTodoRequest) error {
-	todo, err := s.repo.FindById(ctx, todoID)
+func (s *service) Update(ctx context.Context, userID, todoID uint, req UpdateTodoRequest) error {
+	t, err := s.repo.FindById(ctx, todoID)
 	if err != nil {
 		return err
 	}
-
-	if todo == nil {
+	if t == nil {
 		return errors.NotFound("Todo not found")
 	}
-
-	if todo.UserID != userID {
+	if t.UserID != userID {
 		return errors.Forbidden("Not authorized to update this todo")
 	}
 
-	todo.Title = req.Title
-	todo.Description = req.Description
-	todo.DueDate = req.DueDate
+	t.Title = req.Title
+	t.Description = req.Description
+	t.DueDate = req.DueDate
 
-	return s.repo.Update(ctx, todo)
+	return s.repo.Update(ctx, t)
 }
 
-func (s *Service) UpdateStatus(ctx context.Context, userID, todoID uint, req UpdateTodoStatusRequest) error {
-	todo, err := s.repo.FindById(ctx, todoID)
+func (s *service) UpdateStatus(ctx context.Context, userID, todoID uint, req UpdateTodoStatusRequest) error {
+	t, err := s.repo.FindById(ctx, todoID)
 	if err != nil {
 		return err
 	}
-
-	if todo == nil {
+	if t == nil {
 		return errors.NotFound("Todo not found")
 	}
-
-	if todo.UserID != userID {
+	if t.UserID != userID {
 		return errors.Forbidden("Not authorized to update this todo")
 	}
 
 	return s.repo.UpdateStatus(ctx, todoID, req.Status)
 }
 
-func (s *Service) Delete(ctx context.Context, userID, todoID uint) error {
-	todo, err := s.repo.FindById(ctx, todoID)
+func (s *service) Delete(ctx context.Context, userID, todoID uint) error {
+	t, err := s.repo.FindById(ctx, todoID)
 	if err != nil {
 		return err
 	}
-
-	if todo == nil {
+	if t == nil {
 		return errors.NotFound("Todo not found")
 	}
-
-	if todo.UserID != userID {
+	if t.UserID != userID {
 		return errors.Forbidden("Not authorized to delete this todo")
 	}
 
 	return s.repo.Delete(ctx, todoID)
+}
+
+func toResponse(t *Todo) *TodoResponse {
+	return &TodoResponse{
+		ID:          t.ID,
+		Title:       t.Title,
+		Description: t.Description,
+		Status:      t.Status,
+		DueDate:     t.DueDate,
+		CreatedAt:   t.CreatedAt,
+		UpdatedAt:   t.UpdatedAt,
+	}
 }

@@ -33,6 +33,8 @@ func main() {
 	userRepo := mysql.NewUserRepository(mysqlDB)
 	todoRepo := mysql.NewTodoRepository(mysqlDB)
 
+	middleware.SetBlacklistChecker(authRepo)
+
 	authService := auth.NewService(authRepo, userRepo)
 	userService := user.NewService(userRepo)
 	todoService := todo.NewService(todoRepo)
