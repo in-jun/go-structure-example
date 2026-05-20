@@ -12,7 +12,10 @@ const (
 	StatusCompleted Status = "completed"
 )
 
-var errInvalidTodo = errors.New("user ID and title are required")
+var (
+	errInvalidTodo          = errors.New("user ID and title are required")
+	errInvalidReconstructTodo = errors.New("id, user ID, and title are required")
+)
 
 type Todo struct {
 	id          uint
@@ -41,7 +44,10 @@ func NewTodo(userID uint, title, description string, dueDate time.Time) (*Todo, 
 	}, nil
 }
 
-func ReconstructTodo(id, userID uint, title, description string, status Status, dueDate, createdAt, updatedAt time.Time) *Todo {
+func ReconstructTodo(id, userID uint, title, description string, status Status, dueDate, createdAt, updatedAt time.Time) (*Todo, error) {
+	if id == 0 || userID == 0 || title == "" {
+		return nil, errInvalidReconstructTodo
+	}
 	return &Todo{
 		id:          id,
 		userID:      userID,
@@ -51,7 +57,7 @@ func ReconstructTodo(id, userID uint, title, description string, status Status, 
 		dueDate:     dueDate,
 		createdAt:   createdAt,
 		updatedAt:   updatedAt,
-	}
+	}, nil
 }
 
 func (t *Todo) ID() uint             { return t.id }

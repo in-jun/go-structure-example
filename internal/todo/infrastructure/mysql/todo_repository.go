@@ -49,7 +49,11 @@ func (r *todoRepository) FindByID(ctx context.Context, id uint) (*entity.Todo, e
 	if err != nil {
 		return nil, errors.Internal("Failed to get todo")
 	}
-	return entity.ReconstructTodo(tid, userID, title, description, entity.Status(status), dueDate, createdAt, updatedAt), nil
+	t, err := entity.ReconstructTodo(tid, userID, title, description, entity.Status(status), dueDate, createdAt, updatedAt)
+	if err != nil {
+		return nil, errors.Internal("Failed to reconstruct todo")
+	}
+	return t, nil
 }
 
 func (r *todoRepository) FindByUserID(ctx context.Context, userID uint, page, limit int) ([]*entity.Todo, int64, error) {
@@ -78,7 +82,11 @@ func (r *todoRepository) FindByUserID(ctx context.Context, userID uint, page, li
 		if err := rows.Scan(&tid, &uid, &title, &description, &status, &dueDate, &createdAt, &updatedAt); err != nil {
 			return nil, 0, errors.Internal("Failed to scan todo")
 		}
-		todos = append(todos, entity.ReconstructTodo(tid, uid, title, description, entity.Status(status), dueDate, createdAt, updatedAt))
+		t, err := entity.ReconstructTodo(tid, uid, title, description, entity.Status(status), dueDate, createdAt, updatedAt)
+		if err != nil {
+			return nil, 0, errors.Internal("Failed to reconstruct todo")
+		}
+		todos = append(todos, t)
 	}
 
 	if err := rows.Err(); err != nil {
