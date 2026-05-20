@@ -27,6 +27,10 @@ func BadRequest(message string) CustomError {
 	return CustomError{Status: http.StatusBadRequest, Code: "BAD_REQUEST", Message: message}
 }
 
+func ValidationError(message string) CustomError {
+	return CustomError{Status: http.StatusBadRequest, Code: "VALIDATION_ERROR", Message: message}
+}
+
 func Unauthorized(message string) CustomError {
 	return CustomError{Status: http.StatusUnauthorized, Code: "UNAUTHORIZED", Message: message}
 }
