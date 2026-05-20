@@ -1,0 +1,40 @@
+package entity
+
+import (
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
+	"time"
+)
+
+var errInvalidRefreshToken = errors.New("user ID and expiration time are required")
+
+type RefreshToken struct {
+	token     string
+	userID    uint
+	expiresAt time.Time
+}
+
+func NewRefreshToken(userID uint, expiresAt time.Time) (*RefreshToken, error) {
+	if userID == 0 || expiresAt.IsZero() {
+		return nil, errInvalidRefreshToken
+	}
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return nil, err
+	}
+	return &RefreshToken{
+		token:     base64.URLEncoding.EncodeToString(b),
+		userID:    userID,
+		expiresAt: expiresAt,
+	}, nil
+}
+
+func ReconstructRefreshToken(token string, userID uint, expiresAt time.Time) *RefreshToken {
+	return &RefreshToken{token: token, userID: userID, expiresAt: expiresAt}
+}
+
+func (t *RefreshToken) Token() string        { return t.token }
+func (t *RefreshToken) UserID() uint         { return t.userID }
+func (t *RefreshToken) ExpiresAt() time.Time { return t.expiresAt }
+func (t *RefreshToken) IsExpired() bool      { return time.Now().After(t.expiresAt) }

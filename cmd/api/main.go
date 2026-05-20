@@ -1,47 +1,106 @@
 package main
 
 import (
+	"context"
 	"log"
 
-	"github.com/in-jun/go-structure-example/internal/app/auth"
-	"github.com/in-jun/go-structure-example/internal/app/todo"
-	"github.com/in-jun/go-structure-example/internal/app/user"
-	"github.com/in-jun/go-structure-example/internal/pkg/config"
-	"github.com/in-jun/go-structure-example/internal/pkg/db/mysql"
-	"github.com/in-jun/go-structure-example/internal/pkg/db/redis"
-	"github.com/in-jun/go-structure-example/internal/pkg/middleware"
-
 	"github.com/gin-gonic/gin"
+
+	authapp "github.com/in-jun/go-structure-example/internal/auth/application"
+	authcmd "github.com/in-jun/go-structure-example/internal/auth/application/command"
+	authjwt "github.com/in-jun/go-structure-example/internal/auth/infrastructure/jwt"
+	authmysql "github.com/in-jun/go-structure-example/internal/auth/infrastructure/mysql"
+	authredis "github.com/in-jun/go-structure-example/internal/auth/infrastructure/redis"
+	authhttp "github.com/in-jun/go-structure-example/internal/auth/interfaces/http"
+	"github.com/in-jun/go-structure-example/internal/shared/config"
+	"github.com/in-jun/go-structure-example/internal/shared/crypto"
+	"github.com/in-jun/go-structure-example/internal/shared/database"
+	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	"github.com/in-jun/go-structure-example/internal/shared/middleware"
+	todoapp "github.com/in-jun/go-structure-example/internal/todo/application"
+	todocmd "github.com/in-jun/go-structure-example/internal/todo/application/command"
+	todoqry "github.com/in-jun/go-structure-example/internal/todo/application/query"
+	todomysql "github.com/in-jun/go-structure-example/internal/todo/infrastructure/mysql"
+	todohttp "github.com/in-jun/go-structure-example/internal/todo/interfaces/http"
+	userapp "github.com/in-jun/go-structure-example/internal/user/application"
+	usercmd "github.com/in-jun/go-structure-example/internal/user/application/command"
+	userqry "github.com/in-jun/go-structure-example/internal/user/application/query"
+	usermysql "github.com/in-jun/go-structure-example/internal/user/infrastructure/mysql"
+	userhttp "github.com/in-jun/go-structure-example/internal/user/interfaces/http"
 )
 
 func main() {
 	config.Load()
 
-	redisClient, err := redis.NewConnection()
+	redisClient, err := database.NewRedis()
 	if err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 	defer redisClient.Close()
 
-	mysqlDB, err := mysql.NewConnection()
+	mysqlDB, err := database.NewMySQL()
 	if err != nil {
 		log.Fatalf("Failed to connect to MySQL: %v", err)
 	}
 	defer mysqlDB.Close()
 
-	authRepo := redis.NewAuthRepository(redisClient)
-	userRepo := mysql.NewUserRepository(mysqlDB)
-	todoRepo := mysql.NewTodoRepository(mysqlDB)
+	tokenGen, err := authjwt.NewProvider(
+		config.AppConfig.JWTSecret,
+		config.AppConfig.JWTAccessExpiry,
+		config.AppConfig.JWTRefreshExpiry,
+	)
+	if err != nil {
+		log.Fatalf("Failed to create token generator: %v", err)
+	}
 
-	middleware.SetBlacklistChecker(authRepo)
+	hasher := crypto.NewBcryptHasher()
 
-	authService := auth.NewService(authRepo, userRepo)
-	userService := user.NewService(userRepo)
-	todoService := todo.NewService(todoRepo)
+	tokenRepo := authredis.NewTokenRepository(redisClient)
+	authUserRepo := authmysql.NewUserRepository(mysqlDB)
+	userRepo := usermysql.NewUserRepository(mysqlDB)
+	todoRepo := todomysql.NewTodoRepository(mysqlDB)
 
-	authHandler := auth.NewHandler(authService)
-	userHandler := user.NewHandler(userService)
-	todoHandler := todo.NewHandler(todoService)
+	validateToken := func(ctx context.Context, tokenString string) (*middleware.TokenValidateResult, error) {
+		claims, err := tokenGen.ValidateToken(tokenString)
+		if err != nil {
+			return nil, errors.Unauthorized("Invalid token")
+		}
+		blacklisted, err := tokenRepo.IsAccessTokenBlacklisted(ctx, claims.JTI)
+		if err != nil {
+			return nil, errors.Internal("Failed to verify token")
+		}
+		if blacklisted {
+			return nil, errors.Unauthorized("Token has been revoked")
+		}
+		return &middleware.TokenValidateResult{UserID: claims.UserID, JTI: claims.JTI}, nil
+	}
+
+	authService := authapp.NewService(
+		authcmd.NewRegisterHandler(authUserRepo, hasher),
+		authcmd.NewLoginHandler(authUserRepo, tokenRepo, tokenGen, hasher),
+		authcmd.NewRefreshHandler(tokenRepo, tokenGen),
+		authcmd.NewLogoutHandler(tokenRepo, tokenGen),
+	)
+
+	userService := userapp.NewService(
+		usercmd.NewUpdateProfileHandler(userRepo),
+		usercmd.NewUpdatePasswordHandler(userRepo, hasher),
+		usercmd.NewDeleteHandler(userRepo),
+		userqry.NewGetUserHandler(userRepo),
+	)
+
+	todoService := todoapp.NewService(
+		todocmd.NewCreateHandler(todoRepo),
+		todocmd.NewUpdateHandler(todoRepo),
+		todocmd.NewUpdateStatusHandler(todoRepo),
+		todocmd.NewDeleteHandler(todoRepo),
+		todoqry.NewGetTodoHandler(todoRepo),
+		todoqry.NewListTodosHandler(todoRepo),
+	)
+
+	authHandler := authhttp.NewHandler(authService, validateToken)
+	userHandler := userhttp.NewHandler(userService, userService, validateToken)
+	todoHandler := todohttp.NewHandler(todoService, todoService, validateToken)
 
 	router := gin.New()
 	router.Use(gin.Recovery())
