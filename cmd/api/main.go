@@ -118,9 +118,15 @@ func main() {
 		todoqry.NewListHandler(todoRepo),
 	)
 
+	var userCommands userapp.CommandUseCase = userService
+	var userQueries userapp.QueryUseCase = userService
+
+	var todoCommands todoapp.CommandUseCase = todoService
+	var todoQueries todoapp.QueryUseCase = todoService
+
 	authHandler := authhttp.NewHandler(authService, authQueries, validateToken)
-	userHandler := userhttp.NewHandler(userService, userService, validateToken)
-	todoHandler := todohttp.NewHandler(todoService, todoService, validateToken)
+	userHandler := userhttp.NewHandler(userCommands, userQueries, validateToken)
+	todoHandler := todohttp.NewHandler(todoCommands, todoQueries, validateToken)
 
 	healthChecker := health.NewChecker(mysqlDB).WithRedis(redisClient).WithBuildInfo(Version, BuildTime, GitCommit)
 	router := gin.New()
