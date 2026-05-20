@@ -8,13 +8,13 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 )
 
-type TokenValidateResult struct {
+type ValidateTokenResult struct {
 	UserID   uint
 	JTI      string
 	IssuedAt int64
 }
 
-type TokenValidator func(ctx context.Context, tokenString string) (*TokenValidateResult, error)
+type TokenValidator func(ctx context.Context, tokenString string) (*ValidateTokenResult, error)
 
 func Auth(validateToken TokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {

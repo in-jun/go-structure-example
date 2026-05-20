@@ -16,7 +16,7 @@ type CommandUseCase interface {
 }
 
 type QueryUseCase interface {
-	ValidateToken(ctx context.Context, qry query.Validate) (*query.ValidateResult, error)
+	ValidateToken(ctx context.Context, qry query.Validate) (*query.Result, error)
 }
 
 var (
@@ -71,6 +71,6 @@ func (s *service) LogoutAll(ctx context.Context, cmd command.LogoutAll) error {
 	return s.logoutAll.Handle(ctx, cmd)
 }
 
-func (s *service) ValidateToken(ctx context.Context, qry query.Validate) (*query.ValidateResult, error) {
+func (s *service) ValidateToken(ctx context.Context, qry query.Validate) (*query.Result, error) {
 	return s.validate.Handle(ctx, qry)
 }

@@ -12,7 +12,7 @@ type Validate struct {
 	TokenString string
 }
 
-type ValidateResult struct {
+type Result struct {
 	UserID   uint
 	JTI      string
 	IssuedAt int64
@@ -27,7 +27,7 @@ func NewValidateHandler(tokenRepo domain.TokenRepository, tokenGen domain.TokenG
 	return &ValidateHandler{tokenRepo: tokenRepo, tokenGen: tokenGen}
 }
 
-func (h *ValidateHandler) Handle(ctx context.Context, qry Validate) (*ValidateResult, error) {
+func (h *ValidateHandler) Handle(ctx context.Context, qry Validate) (*Result, error) {
 	v, err := vo.NewTokenStringVO(qry.TokenString)
 	if err != nil {
 		return nil, errors.Unauthorized(err.Error())
@@ -54,5 +54,5 @@ func (h *ValidateHandler) Handle(ctx context.Context, qry Validate) (*ValidateRe
 		return nil, errors.Unauthorized("Token has been revoked")
 	}
 
-	return &ValidateResult{UserID: claims.UserID, JTI: claims.JTI, IssuedAt: claims.IssuedAt}, nil
+	return &Result{UserID: claims.UserID, JTI: claims.JTI, IssuedAt: claims.IssuedAt}, nil
 }

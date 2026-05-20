@@ -94,12 +94,12 @@ func main() {
 
 	var authQueries authapp.QueryUseCase = authService
 
-	validateToken := middleware.TokenValidator(func(ctx context.Context, tokenString string) (*middleware.TokenValidateResult, error) {
+	validateToken := middleware.TokenValidator(func(ctx context.Context, tokenString string) (*middleware.ValidateTokenResult, error) {
 		result, err := authQueries.ValidateToken(ctx, authqry.Validate{TokenString: tokenString})
 		if err != nil {
 			return nil, err
 		}
-		return &middleware.TokenValidateResult{UserID: result.UserID, JTI: result.JTI, IssuedAt: result.IssuedAt}, nil
+		return &middleware.ValidateTokenResult{UserID: result.UserID, JTI: result.JTI, IssuedAt: result.IssuedAt}, nil
 	})
 
 	userService := userapp.NewService(

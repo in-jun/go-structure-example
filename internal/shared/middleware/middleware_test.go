@@ -25,8 +25,8 @@ func newTestEngine(mw ...gin.HandlerFunc) *gin.Engine {
 }
 
 func TestAuth_ValidToken(t *testing.T) {
-	validator := TokenValidator(func(ctx context.Context, token string) (*TokenValidateResult, error) {
-		return &TokenValidateResult{UserID: 42, JTI: "jti-123"}, nil
+	validator := TokenValidator(func(ctx context.Context, token string) (*ValidateTokenResult, error) {
+		return &ValidateTokenResult{UserID: 42, JTI: "jti-123"}, nil
 	})
 
 	r := newTestEngine(ErrorHandler())
@@ -49,7 +49,7 @@ func TestAuth_ValidToken(t *testing.T) {
 }
 
 func TestAuth_MissingHeader(t *testing.T) {
-	validator := TokenValidator(func(ctx context.Context, token string) (*TokenValidateResult, error) {
+	validator := TokenValidator(func(ctx context.Context, token string) (*ValidateTokenResult, error) {
 		return nil, errors.Unauthorized("invalid")
 	})
 
@@ -68,7 +68,7 @@ func TestAuth_MissingHeader(t *testing.T) {
 }
 
 func TestAuth_InvalidFormat(t *testing.T) {
-	validator := TokenValidator(func(ctx context.Context, token string) (*TokenValidateResult, error) {
+	validator := TokenValidator(func(ctx context.Context, token string) (*ValidateTokenResult, error) {
 		return nil, nil
 	})
 
@@ -88,7 +88,7 @@ func TestAuth_InvalidFormat(t *testing.T) {
 }
 
 func TestAuth_InvalidToken(t *testing.T) {
-	validator := TokenValidator(func(ctx context.Context, token string) (*TokenValidateResult, error) {
+	validator := TokenValidator(func(ctx context.Context, token string) (*ValidateTokenResult, error) {
 		return nil, errors.Unauthorized("token expired")
 	})
 

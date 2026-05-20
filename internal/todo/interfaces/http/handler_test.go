@@ -49,8 +49,8 @@ func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *gin.En
 	r := gin.New()
 	r.Use(middleware.ErrorHandler())
 
-	tokenValidator := middleware.TokenValidator(func(ctx context.Context, token string) (*middleware.TokenValidateResult, error) {
-		return &middleware.TokenValidateResult{UserID: 1, JTI: "test-jti"}, nil
+	tokenValidator := middleware.TokenValidator(func(ctx context.Context, token string) (*middleware.ValidateTokenResult, error) {
+		return &middleware.ValidateTokenResult{UserID: 1, JTI: "test-jti"}, nil
 	})
 
 	h := NewHandler(cmdMock, qryMock, tokenValidator)
