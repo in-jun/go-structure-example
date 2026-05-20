@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
+	"github.com/in-jun/go-structure-example/internal/todo/application"
 	"github.com/in-jun/go-structure-example/internal/todo/application/command"
 	"github.com/in-jun/go-structure-example/internal/todo/application/query"
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
@@ -43,6 +44,9 @@ func (m *mockQueryUseCase) Get(_ context.Context, _ query.Get) (*query.Result, e
 func (m *mockQueryUseCase) GetList(_ context.Context, _ query.List) (*query.ListResult, error) {
 	return m.todoListResult, m.err
 }
+
+var _ application.CommandUseCase = (*mockCommandUseCase)(nil)
+var _ application.QueryUseCase = (*mockQueryUseCase)(nil)
 
 func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *gin.Engine {
 	gin.SetMode(gin.TestMode)

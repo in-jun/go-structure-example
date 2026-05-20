@@ -65,19 +65,19 @@ func TestTodoService_Create(t *testing.T) {
 	}
 }
 
-func TestTodoService_GetTodo(t *testing.T) {
+func TestTodoService_Get(t *testing.T) {
 	svc := newTestService(&mockTodoRepo{todo: makeTodo()})
 
 	result, err := svc.Get(context.Background(), query.Get{UserID: 1, TodoID: 1})
 	if err != nil {
-		t.Fatalf("GetTodo() error = %v", err)
+		t.Fatalf("Get() error = %v", err)
 	}
 	if result.Title != "Test Todo" {
 		t.Errorf("expected Test Todo, got %q", result.Title)
 	}
 }
 
-func TestTodoService_GetTodo_NotFound(t *testing.T) {
+func TestTodoService_Get_NotFound(t *testing.T) {
 	svc := newTestService(&mockTodoRepo{err: errors.NotFound("not found")})
 
 	_, err := svc.Get(context.Background(), query.Get{UserID: 1, TodoID: 99})
@@ -86,7 +86,7 @@ func TestTodoService_GetTodo_NotFound(t *testing.T) {
 	}
 }
 
-func TestTodoService_GetTodo_Forbidden(t *testing.T) {
+func TestTodoService_Get_Forbidden(t *testing.T) {
 	todo := makeTodo()
 	svc := newTestService(&mockTodoRepo{todo: todo})
 
@@ -96,12 +96,12 @@ func TestTodoService_GetTodo_Forbidden(t *testing.T) {
 	}
 }
 
-func TestTodoService_ListTodos(t *testing.T) {
+func TestTodoService_GetList(t *testing.T) {
 	svc := newTestService(&mockTodoRepo{todos: []*entity.Todo{makeTodo()}, total: 1})
 
 	result, err := svc.GetList(context.Background(), query.List{UserID: 1, Page: 1, Limit: 10})
 	if err != nil {
-		t.Fatalf("ListTodos() error = %v", err)
+		t.Fatalf("GetList() error = %v", err)
 	}
 	if result.Total != 1 {
 		t.Errorf("expected total 1, got %d", result.Total)

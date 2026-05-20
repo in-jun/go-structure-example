@@ -41,6 +41,7 @@ func (m *mockQueryUseCase) ValidateToken(_ context.Context, _ query.Validate) (*
 	return m.validateResp, m.err
 }
 
+var _ application.CommandUseCase = (*mockCommandUseCase)(nil)
 var _ application.QueryUseCase = (*mockQueryUseCase)(nil)
 
 func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *gin.Engine {

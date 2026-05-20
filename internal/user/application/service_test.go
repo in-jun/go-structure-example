@@ -43,19 +43,19 @@ func makeUser() *entity.User {
 	return u
 }
 
-func TestUserService_GetUser(t *testing.T) {
+func TestUserService_GetProfile(t *testing.T) {
 	svc := newTestService(&mockUserRepo{user: makeUser()})
 
 	result, err := svc.GetProfile(context.Background(), query.Get{UserID: 1})
 	if err != nil {
-		t.Fatalf("GetUser() error = %v", err)
+		t.Fatalf("GetProfile() error = %v", err)
 	}
 	if result.Email != "test@example.com" {
 		t.Errorf("expected test@example.com, got %q", result.Email)
 	}
 }
 
-func TestUserService_GetUser_NotFound(t *testing.T) {
+func TestUserService_GetProfile_NotFound(t *testing.T) {
 	svc := newTestService(&mockUserRepo{err: errors.NotFound("user not found")})
 
 	_, err := svc.GetProfile(context.Background(), query.Get{UserID: 99})
