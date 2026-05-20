@@ -89,7 +89,7 @@ func main() {
 		if err != nil {
 			return nil, err
 		}
-		return &middleware.TokenValidateResult{UserID: result.UserID, JTI: result.JTI}, nil
+		return &middleware.TokenValidateResult{UserID: result.UserID, JTI: result.JTI, IssuedAt: result.IssuedAt}, nil
 	})
 
 	userService := userapp.NewService(

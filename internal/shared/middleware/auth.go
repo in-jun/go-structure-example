@@ -9,8 +9,9 @@ import (
 )
 
 type TokenValidateResult struct {
-	UserID uint
-	JTI    string
+	UserID   uint
+	JTI      string
+	IssuedAt int64
 }
 
 type TokenValidator func(ctx context.Context, tokenString string) (*TokenValidateResult, error)
@@ -40,6 +41,7 @@ func Auth(validateToken TokenValidator) gin.HandlerFunc {
 
 		c.Set("user_id", result.UserID)
 		c.Set("jti", result.JTI)
+		c.Set("issued_at", result.IssuedAt)
 		c.Next()
 	}
 }
