@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/in-jun/go-structure-example/internal/todo/domain"
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
 )
 
@@ -25,6 +26,8 @@ func (m *mockTodoRepo) FindByUserID(_ context.Context, _ uint, _, _ int) ([]*ent
 }
 func (m *mockTodoRepo) Update(_ context.Context, _ *entity.Todo) error { return m.err }
 func (m *mockTodoRepo) Delete(_ context.Context, _ uint) error         { return m.err }
+
+var _ domain.TodoRepository = (*mockTodoRepo)(nil)
 
 func TestCreateHandler_Success(t *testing.T) {
 	h := NewCreateHandler(&mockTodoRepo{})
