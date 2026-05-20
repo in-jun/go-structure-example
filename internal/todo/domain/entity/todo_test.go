@@ -59,3 +59,42 @@ func TestTodo_Update(t *testing.T) {
 		t.Errorf("expected New desc, got %q", todo.Description())
 	}
 }
+
+func TestReconstructTodo(t *testing.T) {
+	now := time.Now()
+	tests := []struct {
+		name      string
+		id        uint
+		userID    uint
+		title     string
+		wantError bool
+	}{
+		{"valid", 1, 1, "Test Todo", false},
+		{"zero id", 0, 1, "Test Todo", true},
+		{"zero userID", 1, 0, "Test Todo", true},
+		{"empty title", 1, 1, "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			todo, err := ReconstructTodo(tt.id, tt.userID, tt.title, "", StatusPending, now.Add(time.Hour), now, now)
+			if tt.wantError && err == nil {
+				t.Errorf("expected error, got %+v", todo)
+			}
+			if !tt.wantError && err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestTodo_SetID(t *testing.T) {
+	todo, _ := NewTodo(1, "Test", "", time.Now().Add(time.Hour))
+	if todo.ID() != 0 {
+		t.Error("expected zero ID for new todo before save")
+	}
+	todo.SetID(42)
+	if todo.ID() != 42 {
+		t.Errorf("expected ID 42, got %d", todo.ID())
+	}
+}
