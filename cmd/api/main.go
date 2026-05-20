@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -150,8 +151,11 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:    ":" + config.AppConfig.AppPort,
-		Handler: router,
+		Addr:         ":" + config.AppConfig.AppPort,
+		Handler:      router,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	go func() {
