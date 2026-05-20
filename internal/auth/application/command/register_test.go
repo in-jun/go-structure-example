@@ -87,3 +87,15 @@ func asCustomError(err error, ce *errors.CustomError) bool {
 	}
 	return false
 }
+
+func TestRegisterHandler_RepositoryError(t *testing.T) {
+	h := NewRegisterHandler(&mockUserRepo{err: errors.Internal("db error")}, &mockHasher{}, &noopTransactor{})
+	err := h.Handle(context.Background(), Register{
+		Email:    "test@example.com",
+		Password: "password123",
+		Name:     "Test User",
+	})
+	if err == nil {
+		t.Fatal("expected error for repository failure, got nil")
+	}
+}
