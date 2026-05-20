@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/in-jun/go-structure-example/internal/auth/domain"
+	"github.com/in-jun/go-structure-example/internal/auth/domain/vo"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 )
 
@@ -23,18 +24,19 @@ func NewLogoutHandler(tokenRepo domain.TokenRepository, tokenGen domain.TokenGen
 }
 
 func (h *LogoutHandler) Handle(ctx context.Context, cmd Logout) error {
-	if cmd.RefreshToken == "" {
-		return errors.BadRequest("Refresh token is required")
+	v, err := vo.NewTokenStringVO(cmd.RefreshToken)
+	if err != nil {
+		return errors.BadRequest(err.Error())
 	}
 
-	if err := h.tokenRepo.DeleteByToken(ctx, cmd.RefreshToken); err != nil {
+	if err := h.tokenRepo.DeleteByToken(ctx, v.Token); err != nil {
 		return err
 	}
 
 	if cmd.AccessTokenJTI != "" {
 		ttl := time.Duration(h.tokenGen.AccessExpirySeconds()) * time.Second
-		if err := h.tokenRepo.BlacklistAccessToken(ctx, cmd.AccessTokenJTI, ttl); err != nil {
-			return err
+		if err2 := h.tokenRepo.BlacklistAccessToken(ctx, cmd.AccessTokenJTI, ttl); err2 != nil {
+			return err2
 		}
 	}
 

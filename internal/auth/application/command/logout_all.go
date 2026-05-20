@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/in-jun/go-structure-example/internal/auth/domain"
+	"github.com/in-jun/go-structure-example/internal/auth/domain/vo"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 )
 
@@ -22,14 +23,15 @@ func NewLogoutAllHandler(tokenRepo domain.TokenRepository, tokenGen domain.Token
 }
 
 func (h *LogoutAllHandler) Handle(ctx context.Context, cmd LogoutAll) error {
-	if cmd.UserID == 0 {
-		return errors.BadRequest("User ID is required")
+	v, err := vo.NewUserIDVO(cmd.UserID)
+	if err != nil {
+		return errors.BadRequest(err.Error())
 	}
 
-	if err := h.tokenRepo.DeleteByUserID(ctx, cmd.UserID); err != nil {
+	if err := h.tokenRepo.DeleteByUserID(ctx, v.ID); err != nil {
 		return err
 	}
 
 	ttl := time.Duration(h.tokenGen.AccessExpirySeconds()) * time.Second
-	return h.tokenRepo.RevokeAllAccessTokens(ctx, cmd.UserID, ttl)
+	return h.tokenRepo.RevokeAllAccessTokens(ctx, v.ID, ttl)
 }
