@@ -4,9 +4,13 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 )
 
@@ -197,5 +201,100 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 	if v := w.Header().Get("Referrer-Policy"); v != "strict-origin-when-cross-origin" {
 		t.Errorf("expected 'strict-origin-when-cross-origin', got %q", v)
+	}
+}
+
+func TestBodyLimit_Within(t *testing.T) {
+	r := newTestEngine(BodyLimit(1024))
+	r.POST("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	body := strings.NewReader(`{"name":"test"}`)
+	req := httptest.NewRequest("POST", "/test", body)
+	req.ContentLength = int64(body.Len())
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestBodyLimit_Exceeded(t *testing.T) {
+	r := newTestEngine(ErrorHandler(), BodyLimit(10))
+	r.POST("/test", func(c *gin.Context) {
+		t.Error("handler should not be called")
+	})
+
+	body := strings.NewReader(`{"name":"this is way too long"}`)
+	req := httptest.NewRequest("POST", "/test", body)
+	req.ContentLength = int64(body.Len())
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("expected 413, got %d", w.Code)
+	}
+}
+
+func TestRateLimit(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mr.Close()
+
+	rc := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	defer rc.Close()
+
+	r := newTestEngine(RateLimit(rc, 1))
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "1.2.3.4:5678"
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("first request: expected 200, got %d", w.Code)
+	}
+
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req)
+	if w2.Code != http.StatusTooManyRequests {
+		t.Errorf("second request: expected 429, got %d", w2.Code)
+	}
+}
+
+func TestTimeout_Normal(t *testing.T) {
+	r := newTestEngine(Timeout(1 * time.Second))
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestTimeout_Exceeded(t *testing.T) {
+	r := newTestEngine(Timeout(10 * time.Millisecond))
+	r.GET("/test", func(c *gin.Context) {
+		time.Sleep(100 * time.Millisecond)
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusGatewayTimeout {
+		t.Errorf("expected 504, got %d", w.Code)
 	}
 }

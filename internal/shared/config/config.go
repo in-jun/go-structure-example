@@ -24,6 +24,7 @@ type Config struct {
 	RedisPassword    string
 	CORSAllowOrigins string
 	ShutdownTimeout  time.Duration
+	RequestTimeout   time.Duration
 	RateLimitBurst   int
 }
 
@@ -47,6 +48,7 @@ func Load() {
 		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
 		CORSAllowOrigins:  getEnv("CORS_ALLOW_ORIGINS", "*"),
 		ShutdownTimeout:   parseDuration(getEnv("SHUTDOWN_TIMEOUT", "10s")),
+		RequestTimeout:    parseDuration(getEnv("REQUEST_TIMEOUT", "30s")),
 		RateLimitBurst:    parseInt(getEnv("RATE_LIMIT_BURST", "100")),
 	}
 }
