@@ -204,6 +204,33 @@ func TestHandler_Login_BadJSON(t *testing.T) {
 	}
 }
 
+func TestHandler_Refresh_BadJSON(t *testing.T) {
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewReader([]byte("{invalid}")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandler_Logout_BadJSON(t *testing.T) {
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/auth/logout", bytes.NewReader([]byte("{invalid}")))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer valid-token")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
 func TestHandler_Logout_MissingAuth(t *testing.T) {
 	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	body, _ := json.Marshal(LogoutRequest{RefreshToken: "token"})
