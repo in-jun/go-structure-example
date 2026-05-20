@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 	"github.com/in-jun/go-structure-example/internal/todo/domain"
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
 )
@@ -13,16 +14,16 @@ import (
 var _ domain.TodoRepository = (*todoRepository)(nil)
 
 type todoRepository struct {
-	db *sql.DB
+	db func(ctx context.Context) transaction.DBTX
 }
 
-func NewTodoRepository(db *sql.DB) domain.TodoRepository {
+func NewTodoRepository(db func(ctx context.Context) transaction.DBTX) domain.TodoRepository {
 	return &todoRepository{db: db}
 }
 
 func (r *todoRepository) Save(ctx context.Context, t *entity.Todo) error {
 	query := "INSERT INTO todos (user_id, title, description, due_date) VALUES (?, ?, ?, ?)"
-	result, err := r.db.ExecContext(ctx, query, t.UserID(), t.Title(), t.Description(), t.DueDate())
+	result, err := r.db(ctx).ExecContext(ctx, query, t.UserID(), t.Title(), t.Description(), t.DueDate())
 	if err != nil {
 		return errors.Internal("Failed to create todo")
 	}
@@ -39,7 +40,7 @@ func (r *todoRepository) FindByID(ctx context.Context, id uint) (*entity.Todo, e
 	var tid, userID uint
 	var title, description, status string
 	var dueDate, createdAt, updatedAt time.Time
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := r.db(ctx).QueryRowContext(ctx, query, id).Scan(
 		&tid, &userID, &title, &description, &status, &dueDate, &createdAt, &updatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -53,7 +54,7 @@ func (r *todoRepository) FindByID(ctx context.Context, id uint) (*entity.Todo, e
 
 func (r *todoRepository) FindByUserID(ctx context.Context, userID uint, page, limit int) ([]*entity.Todo, int64, error) {
 	var total int64
-	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM todos WHERE user_id = ?", userID).Scan(&total); err != nil {
+	if err := r.db(ctx).QueryRowContext(ctx, "SELECT COUNT(*) FROM todos WHERE user_id = ?", userID).Scan(&total); err != nil {
 		return nil, 0, errors.Internal("Failed to count todos")
 	}
 
@@ -63,7 +64,7 @@ func (r *todoRepository) FindByUserID(ctx context.Context, userID uint, page, li
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`
-	rows, err := r.db.QueryContext(ctx, query, userID, limit, (page-1)*limit)
+	rows, err := r.db(ctx).QueryContext(ctx, query, userID, limit, (page-1)*limit)
 	if err != nil {
 		return nil, 0, errors.Internal("Failed to get todos")
 	}
@@ -89,7 +90,7 @@ func (r *todoRepository) FindByUserID(ctx context.Context, userID uint, page, li
 
 func (r *todoRepository) Update(ctx context.Context, t *entity.Todo) error {
 	query := "UPDATE todos SET title = ?, description = ?, due_date = ?, status = ? WHERE id = ? AND user_id = ?"
-	result, err := r.db.ExecContext(ctx, query,
+	result, err := r.db(ctx).ExecContext(ctx, query,
 		t.Title(), t.Description(), t.DueDate(), string(t.Status()), t.ID(), t.UserID())
 	if err != nil {
 		return errors.Internal("Failed to update todo")
@@ -105,7 +106,7 @@ func (r *todoRepository) Update(ctx context.Context, t *entity.Todo) error {
 }
 
 func (r *todoRepository) Delete(ctx context.Context, id uint) error {
-	result, err := r.db.ExecContext(ctx, "DELETE FROM todos WHERE id = ?", id)
+	result, err := r.db(ctx).ExecContext(ctx, "DELETE FROM todos WHERE id = ?", id)
 	if err != nil {
 		return errors.Internal("Failed to delete todo")
 	}

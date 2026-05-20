@@ -23,6 +23,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/health"
 	"github.com/in-jun/go-structure-example/internal/shared/logging"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
+	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 	todoapp "github.com/in-jun/go-structure-example/internal/todo/application"
 	todocmd "github.com/in-jun/go-structure-example/internal/todo/application/command"
 	todoqry "github.com/in-jun/go-structure-example/internal/todo/application/query"
@@ -68,10 +69,12 @@ func main() {
 
 	hasher := crypto.NewBcryptHasher()
 
+	dbGetter := transaction.NewDBGetter(mysqlDB)
+
 	tokenRepo := authredis.NewTokenRepository(redisClient)
-	authUserRepo := authmysql.NewUserRepository(mysqlDB)
-	userRepo := usermysql.NewUserRepository(mysqlDB)
-	todoRepo := todomysql.NewTodoRepository(mysqlDB)
+	authUserRepo := authmysql.NewUserRepository(dbGetter)
+	userRepo := usermysql.NewUserRepository(dbGetter)
+	todoRepo := todomysql.NewTodoRepository(dbGetter)
 
 	authService := authapp.NewService(
 		authcmd.NewRegisterHandler(authUserRepo, hasher),

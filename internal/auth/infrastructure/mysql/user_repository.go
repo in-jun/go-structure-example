@@ -9,21 +9,22 @@ import (
 	"github.com/in-jun/go-structure-example/internal/auth/domain"
 	"github.com/in-jun/go-structure-example/internal/auth/domain/entity"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
 var _ domain.UserRepository = (*userRepository)(nil)
 
 type userRepository struct {
-	db *sql.DB
+	db func(ctx context.Context) transaction.DBTX
 }
 
-func NewUserRepository(db *sql.DB) domain.UserRepository {
+func NewUserRepository(db func(ctx context.Context) transaction.DBTX) domain.UserRepository {
 	return &userRepository{db: db}
 }
 
 func (r *userRepository) Save(ctx context.Context, user *entity.User) error {
 	query := "INSERT INTO users (email, password, name) VALUES (?, ?, ?)"
-	result, err := r.db.ExecContext(ctx, query, user.Email(), user.HashedPassword(), user.Name())
+	result, err := r.db(ctx).ExecContext(ctx, query, user.Email(), user.HashedPassword(), user.Name())
 	if err != nil {
 		return errors.Internal("Failed to create user")
 	}
@@ -40,7 +41,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entity
 	var id uint
 	var e, password, name string
 	var createdAt, updatedAt time.Time
-	err := r.db.QueryRowContext(ctx, query, email).Scan(&id, &e, &password, &name, &createdAt, &updatedAt)
+	err := r.db(ctx).QueryRowContext(ctx, query, email).Scan(&id, &e, &password, &name, &createdAt, &updatedAt)
 	if stderrors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

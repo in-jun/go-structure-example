@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 	"github.com/in-jun/go-structure-example/internal/user/domain"
 	"github.com/in-jun/go-structure-example/internal/user/domain/entity"
 )
@@ -14,10 +15,10 @@ import (
 var _ domain.UserRepository = (*userRepository)(nil)
 
 type userRepository struct {
-	db *sql.DB
+	db func(ctx context.Context) transaction.DBTX
 }
 
-func NewUserRepository(db *sql.DB) domain.UserRepository {
+func NewUserRepository(db func(ctx context.Context) transaction.DBTX) domain.UserRepository {
 	return &userRepository{db: db}
 }
 
@@ -26,7 +27,7 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*entity.User, e
 	var uid uint
 	var email, password, name string
 	var createdAt, updatedAt time.Time
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&uid, &email, &password, &name, &createdAt, &updatedAt)
+	err := r.db(ctx).QueryRowContext(ctx, query, id).Scan(&uid, &email, &password, &name, &createdAt, &updatedAt)
 	if stderrors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -38,7 +39,7 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*entity.User, e
 
 func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 	query := "UPDATE users SET name = ?, password = ? WHERE id = ?"
-	result, err := r.db.ExecContext(ctx, query, user.Name(), user.HashedPassword(), user.ID())
+	result, err := r.db(ctx).ExecContext(ctx, query, user.Name(), user.HashedPassword(), user.ID())
 	if err != nil {
 		return errors.Internal("Failed to update user")
 	}
@@ -53,7 +54,7 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 }
 
 func (r *userRepository) Delete(ctx context.Context, id uint) error {
-	result, err := r.db.ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
+	result, err := r.db(ctx).ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
 	if err != nil {
 		return errors.Internal("Failed to delete user")
 	}
