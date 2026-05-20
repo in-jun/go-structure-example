@@ -109,7 +109,7 @@ func TestAuthService_Register(t *testing.T) {
 }
 
 func TestAuthService_Register_DuplicateEmail(t *testing.T) {
-	existingUser := entity.ReconstructUser(1, "test@example.com", "hashed", "Existing", time.Now(), time.Now())
+	existingUser, _ := entity.ReconstructUser(1, "test@example.com", "hashed", "Existing", time.Now(), time.Now())
 	svc := newTestService(&mockUserRepo{user: existingUser}, &mockTokenRepo{}, &mockTokenGen{})
 
 	err := svc.Register(context.Background(), command.Register{
@@ -123,7 +123,7 @@ func TestAuthService_Register_DuplicateEmail(t *testing.T) {
 }
 
 func TestAuthService_Login(t *testing.T) {
-	user := entity.ReconstructUser(1, "test@example.com", "hashed_password123", "Test", time.Now(), time.Now())
+	user, _ := entity.ReconstructUser(1, "test@example.com", "hashed_password123", "Test", time.Now(), time.Now())
 	tokenGen := &mockTokenGen{accessToken: "access-token", refreshToken: "refresh-token"}
 	svc := newTestService(&mockUserRepo{user: user}, &mockTokenRepo{}, tokenGen)
 
@@ -140,7 +140,7 @@ func TestAuthService_Login(t *testing.T) {
 }
 
 func TestAuthService_Login_InvalidPassword(t *testing.T) {
-	user := entity.ReconstructUser(1, "test@example.com", "hashed_correct", "Test", time.Now(), time.Now())
+	user, _ := entity.ReconstructUser(1, "test@example.com", "hashed_correct", "Test", time.Now(), time.Now())
 	svc := newTestService(&mockUserRepo{user: user}, &mockTokenRepo{}, &mockTokenGen{})
 
 	_, err := svc.Login(context.Background(), command.Login{

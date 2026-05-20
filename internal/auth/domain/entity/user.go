@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-var errInvalidUser = errors.New("email, hashed password, and name are required")
+var (
+	errInvalidUser          = errors.New("email, hashed password, and name are required")
+	errInvalidReconstructUser = errors.New("id, email, hashed password, and name are required")
+)
 
 type User struct {
 	id        uint
@@ -30,7 +33,10 @@ func NewUser(email, hashedPassword, name string) (*User, error) {
 	}, nil
 }
 
-func ReconstructUser(id uint, email, password, name string, createdAt, updatedAt time.Time) *User {
+func ReconstructUser(id uint, email, password, name string, createdAt, updatedAt time.Time) (*User, error) {
+	if id == 0 || email == "" || password == "" || name == "" {
+		return nil, errInvalidReconstructUser
+	}
 	return &User{
 		id:        id,
 		email:     email,
@@ -38,7 +44,7 @@ func ReconstructUser(id uint, email, password, name string, createdAt, updatedAt
 		name:      name,
 		createdAt: createdAt,
 		updatedAt: updatedAt,
-	}
+	}, nil
 }
 
 func (u *User) ID() uint             { return u.id }

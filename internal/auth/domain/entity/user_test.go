@@ -51,7 +51,10 @@ func TestNewUser(t *testing.T) {
 func TestReconstructUser(t *testing.T) {
 	now := time.Now()
 
-	u := ReconstructUser(1, "test@example.com", "hashed", "Test", now, now)
+	u, err := ReconstructUser(1, "test@example.com", "hashed", "Test", now, now)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if u.ID() != 1 {
 		t.Errorf("expected ID 1, got %d", u.ID())
 	}

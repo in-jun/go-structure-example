@@ -48,5 +48,9 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entity
 	if err != nil {
 		return nil, errors.Internal("Failed to get user by email")
 	}
-	return entity.ReconstructUser(id, e, password, name, createdAt, updatedAt), nil
+	u, err := entity.ReconstructUser(id, e, password, name, createdAt, updatedAt)
+	if err != nil {
+		return nil, errors.Internal("Failed to reconstruct user")
+	}
+	return u, nil
 }
