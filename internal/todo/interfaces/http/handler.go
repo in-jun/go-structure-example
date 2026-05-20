@@ -60,7 +60,15 @@ func (h *Handler) Create(c *gin.Context) {
 
 func (h *Handler) GetList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 1
+	} else if limit > 100 {
+		limit = 100
+	}
 	userID := c.GetUint("user_id")
 
 	result, err := h.queries.ListTodos(c.Request.Context(), query.ListTodos{
