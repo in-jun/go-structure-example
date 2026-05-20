@@ -6,14 +6,14 @@ import (
 	"github.com/in-jun/go-structure-example/internal/auth/application/command"
 )
 
-func TestToAuthResponse(t *testing.T) {
+func TestToLoginResponse(t *testing.T) {
 	result := &command.LoginResult{
 		AccessToken:  "access-token",
 		RefreshToken: "refresh-token",
 		ExpiresIn:    3600,
 	}
 
-	resp := toAuthResponse(result)
+	resp := toLoginResponse(result)
 
 	if resp.AccessToken != "access-token" {
 		t.Errorf("AccessToken = %q, want %q", resp.AccessToken, "access-token")

@@ -116,7 +116,7 @@ func TestHandler_Login(t *testing.T) {
 		t.Errorf("expected 200, got %d; body: %s", w.Code, w.Body.String())
 	}
 
-	var resp AuthResponse
+	var resp Response
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp.AccessToken != "access" {
 		t.Errorf("expected access token 'access', got %q", resp.AccessToken)

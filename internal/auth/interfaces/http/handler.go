@@ -66,7 +66,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toAuthResponse(result))
+	c.JSON(http.StatusOK, toLoginResponse(result))
 }
 
 func (h *Handler) Refresh(c *gin.Context) {

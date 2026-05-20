@@ -40,7 +40,6 @@ func (h *RefreshHandler) Handle(ctx context.Context, cmd Refresh) (*RefreshResul
 		return nil, err
 	}
 	if old == nil {
-		// Token not found — check if it was already used (possible theft attempt)
 		userID, err := h.tokenRepo.FindUsedToken(ctx, v.Token)
 		if err != nil {
 			return nil, err
@@ -60,7 +59,6 @@ func (h *RefreshHandler) Handle(ctx context.Context, cmd Refresh) (*RefreshResul
 	if err := h.tokenRepo.DeleteByToken(ctx, v.Token); err != nil {
 		return nil, err
 	}
-	// Mark token as used so reuse can be detected
 	if err := h.tokenRepo.MarkTokenUsed(ctx, v.Token, old.UserID()); err != nil {
 		return nil, err
 	}
