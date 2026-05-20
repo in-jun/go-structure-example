@@ -34,7 +34,11 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*entity.User, e
 	if err != nil {
 		return nil, errors.Internal("Failed to get user")
 	}
-	return entity.ReconstructUser(uid, email, password, name, createdAt, updatedAt)
+	u, err := entity.ReconstructUser(uid, email, password, name, createdAt, updatedAt)
+	if err != nil {
+		return nil, errors.Internal("Failed to reconstruct user")
+	}
+	return u, nil
 }
 
 func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
