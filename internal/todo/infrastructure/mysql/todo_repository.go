@@ -3,6 +3,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	stderrors "errors"
 	"time"
 
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
@@ -43,7 +44,7 @@ func (r *todoRepository) FindByID(ctx context.Context, id uint) (*entity.Todo, e
 	err := r.db(ctx).QueryRowContext(ctx, query, id).Scan(
 		&tid, &userID, &title, &description, &status, &dueDate, &createdAt, &updatedAt,
 	)
-	if err == sql.ErrNoRows {
+	if stderrors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
