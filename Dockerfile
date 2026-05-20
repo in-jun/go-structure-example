@@ -14,5 +14,6 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /api /api
+COPY --from=builder /app/migrations /migrations
 EXPOSE 8080
 ENTRYPOINT ["/api"]
