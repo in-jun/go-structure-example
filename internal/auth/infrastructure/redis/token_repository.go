@@ -144,3 +144,30 @@ func (r *tokenRepository) IsAccessTokenBlacklisted(ctx context.Context, jti stri
 	}
 	return true, nil
 }
+
+func (r *tokenRepository) revokedAtKey(userID uint) string {
+	return fmt.Sprintf("revoked_at:user:%d", userID)
+}
+
+func (r *tokenRepository) RevokeAllAccessTokens(ctx context.Context, userID uint, ttl time.Duration) error {
+	now := fmt.Sprintf("%d", time.Now().Unix())
+	if err := r.client.Set(ctx, r.revokedAtKey(userID), now, ttl).Err(); err != nil {
+		return errors.Internal("Failed to revoke all access tokens")
+	}
+	return nil
+}
+
+func (r *tokenRepository) IsRevokedForUser(ctx context.Context, userID uint, issuedAt int64) (bool, error) {
+	val, err := r.client.Get(ctx, r.revokedAtKey(userID)).Result()
+	if stderrors.Is(err, goredis.Nil) {
+		return false, nil
+	}
+	if err != nil {
+		return false, errors.Internal("Failed to check token revocation")
+	}
+	var revokedAt int64
+	if _, err := fmt.Sscanf(val, "%d", &revokedAt); err != nil {
+		return false, errors.Internal("Failed to parse revocation timestamp")
+	}
+	return issuedAt <= revokedAt, nil
+}

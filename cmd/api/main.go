@@ -72,6 +72,13 @@ func main() {
 		if blacklisted {
 			return nil, errors.Unauthorized("Token has been revoked")
 		}
+		revoked, err := tokenRepo.IsRevokedForUser(ctx, claims.UserID, claims.IssuedAt)
+		if err != nil {
+			return nil, errors.Internal("Failed to verify token")
+		}
+		if revoked {
+			return nil, errors.Unauthorized("All sessions have been revoked")
+		}
 		return &middleware.TokenValidateResult{UserID: claims.UserID, JTI: claims.JTI}, nil
 	}
 
@@ -80,6 +87,7 @@ func main() {
 		authcmd.NewLoginHandler(authUserRepo, tokenRepo, tokenGen, hasher),
 		authcmd.NewRefreshHandler(tokenRepo, tokenGen),
 		authcmd.NewLogoutHandler(tokenRepo, tokenGen),
+		authcmd.NewLogoutAllHandler(tokenRepo, tokenGen),
 	)
 
 	userService := userapp.NewService(

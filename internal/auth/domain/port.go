@@ -19,11 +19,14 @@ type TokenRepository interface {
 	DeleteByToken(ctx context.Context, token string) error
 	BlacklistAccessToken(ctx context.Context, jti string, ttl time.Duration) error
 	IsAccessTokenBlacklisted(ctx context.Context, jti string) (bool, error)
+	RevokeAllAccessTokens(ctx context.Context, userID uint, ttl time.Duration) error
+	IsRevokedForUser(ctx context.Context, userID uint, issuedAt int64) (bool, error)
 }
 
 type TokenClaims struct {
-	UserID uint
-	JTI    string
+	UserID   uint
+	JTI      string
+	IssuedAt int64
 }
 
 type TokenGenerator interface {

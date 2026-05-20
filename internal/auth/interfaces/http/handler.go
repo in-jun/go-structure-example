@@ -26,6 +26,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		auth.POST("/login", h.Login)
 		auth.POST("/refresh", h.Refresh)
 		auth.POST("/logout", middleware.Auth(h.validateToken), h.Logout)
+		auth.POST("/logout/all", middleware.Auth(h.validateToken), h.LogoutAll)
 	}
 }
 
@@ -103,4 +104,17 @@ func (h *Handler) Logout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, MessageResponse{Message: "Logout successful"})
+}
+
+func (h *Handler) LogoutAll(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	if err := h.commands.LogoutAll(c.Request.Context(), command.LogoutAll{
+		UserID: userID,
+	}); err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, MessageResponse{Message: "All sessions logged out successfully"})
 }

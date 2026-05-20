@@ -65,7 +65,11 @@ func (p *provider) ValidateToken(tokenString string) (*domain.TokenClaims, error
 		return nil, err
 	}
 	if c, ok := token.Claims.(*claims); ok && token.Valid {
-		return &domain.TokenClaims{UserID: c.UserID, JTI: c.ID}, nil
+		var issuedAt int64
+		if c.IssuedAt != nil {
+			issuedAt = c.IssuedAt.Unix()
+		}
+		return &domain.TokenClaims{UserID: c.UserID, JTI: c.ID, IssuedAt: issuedAt}, nil
 	}
 	return nil, jwt.ErrSignatureInvalid
 }
