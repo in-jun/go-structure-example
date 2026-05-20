@@ -23,7 +23,7 @@ services:
       REQUEST_TIMEOUT: "30s"
       RATE_LIMIT_BURST: "100"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health/live || exit 1"]
+      test: ["CMD", "/api", "healthcheck"]
       interval: 10s
       timeout: 5s
       retries: 3
