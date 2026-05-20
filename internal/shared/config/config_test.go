@@ -32,6 +32,15 @@ func TestLoad_Defaults(t *testing.T) {
 	if AppConfig.CORSAllowOrigins != "*" {
 		t.Errorf("expected default CORSAllowOrigins '*', got %q", AppConfig.CORSAllowOrigins)
 	}
+	if AppConfig.JWTAccessExpiry != "15m" {
+		t.Errorf("expected default JWTAccessExpiry '15m', got %q", AppConfig.JWTAccessExpiry)
+	}
+	if AppConfig.JWTRefreshExpiry != "168h" {
+		t.Errorf("expected default JWTRefreshExpiry '168h', got %q", AppConfig.JWTRefreshExpiry)
+	}
+	if AppConfig.RedisPort != "6379" {
+		t.Errorf("expected default RedisPort '6379', got %q", AppConfig.RedisPort)
+	}
 }
 
 func TestLoad_CustomEnv(t *testing.T) {
