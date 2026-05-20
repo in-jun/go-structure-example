@@ -109,3 +109,4 @@ func TestUserService_Delete(t *testing.T) {
 }
 
 var _ domain.UserRepository = (*mockUserRepo)(nil)
+var _ domain.PasswordHasher = (*mockHasher)(nil)

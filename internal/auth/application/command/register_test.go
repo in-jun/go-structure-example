@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/in-jun/go-structure-example/internal/auth/domain"
 	"github.com/in-jun/go-structure-example/internal/auth/domain/entity"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
 type mockUserRepo struct {
@@ -31,6 +33,10 @@ type noopTransactor struct{}
 func (n *noopTransactor) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
 	return fn(ctx)
 }
+
+var _ domain.UserRepository = (*mockUserRepo)(nil)
+var _ domain.PasswordHasher = (*mockHasher)(nil)
+var _ transaction.Transactor = (*noopTransactor)(nil)
 
 func TestRegisterHandler_Success(t *testing.T) {
 	h := NewRegisterHandler(&mockUserRepo{}, &mockHasher{}, &noopTransactor{})

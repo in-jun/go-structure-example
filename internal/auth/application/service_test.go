@@ -10,6 +10,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/auth/domain"
 	"github.com/in-jun/go-structure-example/internal/auth/domain/entity"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
 type noopTransactor struct{}
@@ -61,6 +62,9 @@ func (m *mockTokenRepo) IsRevokedForUser(_ context.Context, _ uint, _ int64) (bo
 
 var _ domain.TokenRepository = (*mockTokenRepo)(nil)
 var _ domain.UserRepository = (*mockUserRepo)(nil)
+var _ domain.TokenGenerator = (*mockTokenGen)(nil)
+var _ domain.PasswordHasher = (*mockHasher)(nil)
+var _ transaction.Transactor = (*noopTransactor)(nil)
 
 type mockTokenGen struct {
 	accessToken string

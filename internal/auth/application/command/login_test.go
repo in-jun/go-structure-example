@@ -49,6 +49,7 @@ func (m *mockTokenGen) AccessExpirySeconds() int           { return 900 }
 func (m *mockTokenGen) RefreshExpiry() time.Duration       { return 7 * 24 * time.Hour }
 
 var _ domain.TokenRepository = (*mockTokenRepo)(nil)
+var _ domain.TokenGenerator = (*mockTokenGen)(nil)
 
 func makeAuthUser() *entity.User {
 	u, _ := entity.NewUser("test@example.com", "hashed_password123", "Test User")

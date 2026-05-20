@@ -10,6 +10,9 @@ import (
 	"github.com/in-jun/go-structure-example/internal/user/domain/entity"
 )
 
+var _ domain.UserRepository = (*mockUserRepo)(nil)
+var _ domain.PasswordHasher = (*mockHasher)(nil)
+
 type mockUserRepo struct {
 	user *entity.User
 	err  error
@@ -20,8 +23,6 @@ func (m *mockUserRepo) FindByID(_ context.Context, _ uint) (*entity.User, error)
 }
 func (m *mockUserRepo) Update(_ context.Context, _ *entity.User) error { return m.err }
 func (m *mockUserRepo) Delete(_ context.Context, _ uint) error         { return m.err }
-
-var _ domain.UserRepository = (*mockUserRepo)(nil)
 
 type mockHasher struct{}
 
