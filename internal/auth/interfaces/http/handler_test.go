@@ -32,15 +32,18 @@ func (m *mockCommandUseCase) Refresh(_ context.Context, _ command.Refresh) (*com
 func (m *mockCommandUseCase) Logout(_ context.Context, _ command.Logout) error      { return m.err }
 func (m *mockCommandUseCase) LogoutAll(_ context.Context, _ command.LogoutAll) error { return m.err }
 
-type mockQueryUseCase struct{}
+type mockQueryUseCase struct {
+	validateResp *query.Result
+	err          error
+}
 
 func (m *mockQueryUseCase) ValidateToken(_ context.Context, _ query.Validate) (*query.Result, error) {
-	return &query.Result{UserID: 1, JTI: "test-jti"}, nil
+	return m.validateResp, m.err
 }
 
 var _ application.QueryUseCase = (*mockQueryUseCase)(nil)
 
-func setupRouter(cmdMock *mockCommandUseCase) *gin.Engine {
+func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(middleware.ErrorHandler())
@@ -49,14 +52,14 @@ func setupRouter(cmdMock *mockCommandUseCase) *gin.Engine {
 		return &middleware.ValidateTokenResult{UserID: 1, JTI: "test-jti"}, nil
 	})
 
-	h := NewHandler(cmdMock, &mockQueryUseCase{}, tokenValidator)
+	h := NewHandler(cmdMock, qryMock, tokenValidator)
 	api := r.Group("/api/v1")
 	h.RegisterRoutes(api)
 	return r
 }
 
 func TestHandler_Register(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{})
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	body, _ := json.Marshal(RegisterRequest{Email: "test@example.com", Password: "password123", Name: "Test"})
 	req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -70,7 +73,7 @@ func TestHandler_Register(t *testing.T) {
 }
 
 func TestHandler_Register_Error(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{err: errors.Conflict("email exists")})
+	r := setupRouter(&mockCommandUseCase{err: errors.Conflict("email exists")}, &mockQueryUseCase{})
 	body, _ := json.Marshal(RegisterRequest{Email: "test@example.com", Password: "password123", Name: "Test"})
 	req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -83,19 +86,6 @@ func TestHandler_Register_Error(t *testing.T) {
 	}
 }
 
-func TestHandler_Register_BadJSON(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{})
-	req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader([]byte("{invalid}")))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Code)
-	}
-}
-
 func TestHandler_Login(t *testing.T) {
 	cmdMock := &mockCommandUseCase{
 		loginResp: &command.LoginResult{
@@ -104,7 +94,7 @@ func TestHandler_Login(t *testing.T) {
 			ExpiresIn:    3600,
 		},
 	}
-	r := setupRouter(cmdMock)
+	r := setupRouter(cmdMock, &mockQueryUseCase{})
 	body, _ := json.Marshal(LoginRequest{Email: "test@example.com", Password: "password"})
 	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -124,7 +114,8 @@ func TestHandler_Login(t *testing.T) {
 }
 
 func TestHandler_Login_InvalidCredentials(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{err: errors.Unauthorized("invalid credentials")})
+	cmdMock := &mockCommandUseCase{err: errors.Unauthorized("invalid credentials")}
+	r := setupRouter(cmdMock, &mockQueryUseCase{})
 	body, _ := json.Marshal(LoginRequest{Email: "test@example.com", Password: "wrong"})
 	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -137,19 +128,6 @@ func TestHandler_Login_InvalidCredentials(t *testing.T) {
 	}
 }
 
-func TestHandler_Login_BadJSON(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{})
-	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader([]byte("{invalid}")))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Code)
-	}
-}
-
 func TestHandler_Refresh(t *testing.T) {
 	cmdMock := &mockCommandUseCase{
 		refreshResp: &command.RefreshResult{
@@ -158,7 +136,7 @@ func TestHandler_Refresh(t *testing.T) {
 			ExpiresIn:    3600,
 		},
 	}
-	r := setupRouter(cmdMock)
+	r := setupRouter(cmdMock, &mockQueryUseCase{})
 	body, _ := json.Marshal(RefreshRequest{RefreshToken: "old-refresh"})
 	req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -172,7 +150,7 @@ func TestHandler_Refresh(t *testing.T) {
 }
 
 func TestHandler_Logout(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{})
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	body, _ := json.Marshal(LogoutRequest{RefreshToken: "token"})
 	req := httptest.NewRequest("POST", "/api/v1/auth/logout", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -187,7 +165,7 @@ func TestHandler_Logout(t *testing.T) {
 }
 
 func TestHandler_LogoutAll(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{})
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	req := httptest.NewRequest("POST", "/api/v1/auth/logout/all", nil)
 	req.Header.Set("Authorization", "Bearer valid-token")
 	w := httptest.NewRecorder()
@@ -199,8 +177,34 @@ func TestHandler_LogoutAll(t *testing.T) {
 	}
 }
 
+func TestHandler_Register_BadJSON(t *testing.T) {
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader([]byte("{invalid}")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandler_Login_BadJSON(t *testing.T) {
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader([]byte("{invalid}")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
 func TestHandler_Logout_MissingAuth(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{})
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	body, _ := json.Marshal(LogoutRequest{RefreshToken: "token"})
 	req := httptest.NewRequest("POST", "/api/v1/auth/logout", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
