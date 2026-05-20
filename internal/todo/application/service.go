@@ -15,8 +15,8 @@ type CommandUseCase interface {
 }
 
 type QueryUseCase interface {
-	GetTodo(ctx context.Context, qry query.GetTodo) (*query.TodoResult, error)
-	ListTodos(ctx context.Context, qry query.ListTodos) (*query.TodoListResult, error)
+	Get(ctx context.Context, qry query.Get) (*query.Result, error)
+	GetList(ctx context.Context, qry query.List) (*query.ListResult, error)
 }
 
 var (
@@ -29,8 +29,8 @@ type service struct {
 	update       *command.UpdateHandler
 	updateStatus *command.UpdateStatusHandler
 	delete       *command.DeleteHandler
-	getTodo      *query.GetTodoHandler
-	listTodos    *query.ListTodosHandler
+	get          *query.GetHandler
+	list         *query.ListHandler
 }
 
 func NewService(
@@ -38,16 +38,16 @@ func NewService(
 	update *command.UpdateHandler,
 	updateStatus *command.UpdateStatusHandler,
 	delete *command.DeleteHandler,
-	getTodo *query.GetTodoHandler,
-	listTodos *query.ListTodosHandler,
+	get *query.GetHandler,
+	list *query.ListHandler,
 ) *service {
 	return &service{
 		create:       create,
 		update:       update,
 		updateStatus: updateStatus,
 		delete:       delete,
-		getTodo:      getTodo,
-		listTodos:    listTodos,
+		get:          get,
+		list:         list,
 	}
 }
 
@@ -67,10 +67,10 @@ func (s *service) Delete(ctx context.Context, cmd command.Delete) error {
 	return s.delete.Handle(ctx, cmd)
 }
 
-func (s *service) GetTodo(ctx context.Context, qry query.GetTodo) (*query.TodoResult, error) {
-	return s.getTodo.Handle(ctx, qry)
+func (s *service) Get(ctx context.Context, qry query.Get) (*query.Result, error) {
+	return s.get.Handle(ctx, qry)
 }
 
-func (s *service) ListTodos(ctx context.Context, qry query.ListTodos) (*query.TodoListResult, error) {
-	return s.listTodos.Handle(ctx, qry)
+func (s *service) GetList(ctx context.Context, qry query.List) (*query.ListResult, error) {
+	return s.list.Handle(ctx, qry)
 }

@@ -8,26 +8,26 @@ import (
 	"github.com/in-jun/go-structure-example/internal/user/domain"
 )
 
-type GetUser struct {
+type Get struct {
 	UserID uint
 }
 
-type UserResult struct {
+type Result struct {
 	ID        uint
 	Email     string
 	Name      string
 	CreatedAt time.Time
 }
 
-type GetUserHandler struct {
+type GetHandler struct {
 	userRepo domain.UserRepository
 }
 
-func NewGetUserHandler(userRepo domain.UserRepository) *GetUserHandler {
-	return &GetUserHandler{userRepo: userRepo}
+func NewGetHandler(userRepo domain.UserRepository) *GetHandler {
+	return &GetHandler{userRepo: userRepo}
 }
 
-func (h *GetUserHandler) Handle(ctx context.Context, qry GetUser) (*UserResult, error) {
+func (h *GetHandler) Handle(ctx context.Context, qry Get) (*Result, error) {
 	u, err := h.userRepo.FindByID(ctx, qry.UserID)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (h *GetUserHandler) Handle(ctx context.Context, qry GetUser) (*UserResult, 
 		return nil, errors.NotFound("User not found")
 	}
 
-	return &UserResult{
+	return &Result{
 		ID:        u.ID(),
 		Email:     u.Email(),
 		Name:      u.Name(),

@@ -9,7 +9,7 @@ import (
 
 func TestToUserResponse(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
-	result := &query.UserResult{
+	result := &query.Result{
 		ID:        1,
 		Email:     "test@example.com",
 		Name:      "Test User",

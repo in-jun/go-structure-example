@@ -14,7 +14,7 @@ type CommandUseCase interface {
 }
 
 type QueryUseCase interface {
-	GetUser(ctx context.Context, qry query.GetUser) (*query.UserResult, error)
+	GetProfile(ctx context.Context, qry query.Get) (*query.Result, error)
 }
 
 var (
@@ -23,23 +23,23 @@ var (
 )
 
 type service struct {
-	updateProfile   *command.UpdateProfileHandler
-	updatePassword  *command.UpdatePasswordHandler
-	delete          *command.DeleteHandler
-	getUser         *query.GetUserHandler
+	updateProfile  *command.UpdateProfileHandler
+	updatePassword *command.UpdatePasswordHandler
+	delete         *command.DeleteHandler
+	get            *query.GetHandler
 }
 
 func NewService(
 	updateProfile *command.UpdateProfileHandler,
 	updatePassword *command.UpdatePasswordHandler,
 	delete *command.DeleteHandler,
-	getUser *query.GetUserHandler,
+	get *query.GetHandler,
 ) *service {
 	return &service{
 		updateProfile:  updateProfile,
 		updatePassword: updatePassword,
 		delete:         delete,
-		getUser:        getUser,
+		get:            get,
 	}
 }
 
@@ -55,6 +55,6 @@ func (s *service) Delete(ctx context.Context, cmd command.Delete) error {
 	return s.delete.Handle(ctx, cmd)
 }
 
-func (s *service) GetUser(ctx context.Context, qry query.GetUser) (*query.UserResult, error) {
-	return s.getUser.Handle(ctx, qry)
+func (s *service) GetProfile(ctx context.Context, qry query.Get) (*query.Result, error) {
+	return s.get.Handle(ctx, qry)
 }

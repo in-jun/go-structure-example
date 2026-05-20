@@ -17,7 +17,7 @@ type MessageResponse struct {
 	Message string `json:"message"`
 }
 
-func toUserResponse(r *query.UserResult) *UserResponse {
+func toUserResponse(r *query.Result) *UserResponse {
 	return &UserResponse{
 		ID:        r.ID,
 		Email:     r.Email,

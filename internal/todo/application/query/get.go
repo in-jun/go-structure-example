@@ -9,12 +9,12 @@ import (
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
 )
 
-type GetTodo struct {
+type Get struct {
 	UserID uint
 	TodoID uint
 }
 
-type TodoResult struct {
+type Result struct {
 	ID          uint
 	Title       string
 	Description string
@@ -24,15 +24,15 @@ type TodoResult struct {
 	UpdatedAt   time.Time
 }
 
-type GetTodoHandler struct {
+type GetHandler struct {
 	todoRepo domain.TodoRepository
 }
 
-func NewGetTodoHandler(todoRepo domain.TodoRepository) *GetTodoHandler {
-	return &GetTodoHandler{todoRepo: todoRepo}
+func NewGetHandler(todoRepo domain.TodoRepository) *GetHandler {
+	return &GetHandler{todoRepo: todoRepo}
 }
 
-func (h *GetTodoHandler) Handle(ctx context.Context, qry GetTodo) (*TodoResult, error) {
+func (h *GetHandler) Handle(ctx context.Context, qry Get) (*Result, error) {
 	t, err := h.todoRepo.FindByID(ctx, qry.TodoID)
 	if err != nil {
 		return nil, err
@@ -47,8 +47,8 @@ func (h *GetTodoHandler) Handle(ctx context.Context, qry GetTodo) (*TodoResult, 
 	return toTodoResult(t), nil
 }
 
-func toTodoResult(t *entity.Todo) *TodoResult {
-	return &TodoResult{
+func toTodoResult(t *entity.Todo) *Result {
+	return &Result{
 		ID:          t.ID(),
 		Title:       t.Title(),
 		Description: t.Description(),

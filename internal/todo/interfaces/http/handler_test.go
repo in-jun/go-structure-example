@@ -32,15 +32,15 @@ func (m *mockCommandUseCase) UpdateStatus(_ context.Context, _ command.UpdateSta
 func (m *mockCommandUseCase) Delete(_ context.Context, _ command.Delete) error { return m.err }
 
 type mockQueryUseCase struct {
-	todoResult     *query.TodoResult
-	todoListResult *query.TodoListResult
+	todoResult     *query.Result
+	todoListResult *query.ListResult
 	err            error
 }
 
-func (m *mockQueryUseCase) GetTodo(_ context.Context, _ query.GetTodo) (*query.TodoResult, error) {
+func (m *mockQueryUseCase) Get(_ context.Context, _ query.Get) (*query.Result, error) {
 	return m.todoResult, m.err
 }
-func (m *mockQueryUseCase) ListTodos(_ context.Context, _ query.ListTodos) (*query.TodoListResult, error) {
+func (m *mockQueryUseCase) GetList(_ context.Context, _ query.List) (*query.ListResult, error) {
 	return m.todoListResult, m.err
 }
 
@@ -95,8 +95,8 @@ func TestHandler_Create_Error(t *testing.T) {
 
 func TestHandler_GetList(t *testing.T) {
 	qryMock := &mockQueryUseCase{
-		todoListResult: &query.TodoListResult{
-			Todos: []query.TodoResult{{
+		todoListResult: &query.ListResult{
+			Todos: []query.Result{{
 				ID:    1,
 				Title: "Test",
 				DueDate: time.Now().Add(time.Hour),
@@ -124,7 +124,7 @@ func TestHandler_GetList(t *testing.T) {
 
 func TestHandler_Get(t *testing.T) {
 	qryMock := &mockQueryUseCase{
-		todoResult: &query.TodoResult{
+		todoResult: &query.Result{
 			ID:      1,
 			Title:   "Test",
 			Status:  entity.StatusPending,

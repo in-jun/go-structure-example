@@ -10,7 +10,7 @@ import (
 
 func TestToTodoResponse(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
-	result := &query.TodoResult{
+	result := &query.Result{
 		ID:          1,
 		Title:       "Buy groceries",
 		Description: "Milk and eggs",
@@ -35,8 +35,8 @@ func TestToTodoResponse(t *testing.T) {
 
 func TestToTodoListResponse(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
-	result := &query.TodoListResult{
-		Todos: []query.TodoResult{
+	result := &query.ListResult{
+		Todos: []query.Result{
 			{ID: 1, Title: "Todo 1", DueDate: now.Add(time.Hour)},
 			{ID: 2, Title: "Todo 2", DueDate: now.Add(2 * time.Hour)},
 		},

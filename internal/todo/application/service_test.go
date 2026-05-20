@@ -38,8 +38,8 @@ func newTestService(repo *mockTodoRepo) *service {
 		command.NewUpdateHandler(repo),
 		command.NewUpdateStatusHandler(repo),
 		command.NewDeleteHandler(repo),
-		query.NewGetTodoHandler(repo),
-		query.NewListTodosHandler(repo),
+		query.NewGetHandler(repo),
+		query.NewListHandler(repo),
 	)
 }
 
@@ -68,7 +68,7 @@ func TestTodoService_Create(t *testing.T) {
 func TestTodoService_GetTodo(t *testing.T) {
 	svc := newTestService(&mockTodoRepo{todo: makeTodo()})
 
-	result, err := svc.GetTodo(context.Background(), query.GetTodo{UserID: 1, TodoID: 1})
+	result, err := svc.Get(context.Background(), query.Get{UserID: 1, TodoID: 1})
 	if err != nil {
 		t.Fatalf("GetTodo() error = %v", err)
 	}
@@ -80,7 +80,7 @@ func TestTodoService_GetTodo(t *testing.T) {
 func TestTodoService_GetTodo_NotFound(t *testing.T) {
 	svc := newTestService(&mockTodoRepo{err: errors.NotFound("not found")})
 
-	_, err := svc.GetTodo(context.Background(), query.GetTodo{UserID: 1, TodoID: 99})
+	_, err := svc.Get(context.Background(), query.Get{UserID: 1, TodoID: 99})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -90,7 +90,7 @@ func TestTodoService_GetTodo_Forbidden(t *testing.T) {
 	todo := makeTodo()
 	svc := newTestService(&mockTodoRepo{todo: todo})
 
-	_, err := svc.GetTodo(context.Background(), query.GetTodo{UserID: 999, TodoID: 1})
+	_, err := svc.Get(context.Background(), query.Get{UserID: 999, TodoID: 1})
 	if err == nil {
 		t.Fatal("expected forbidden error, got nil")
 	}
@@ -99,7 +99,7 @@ func TestTodoService_GetTodo_Forbidden(t *testing.T) {
 func TestTodoService_ListTodos(t *testing.T) {
 	svc := newTestService(&mockTodoRepo{todos: []*entity.Todo{makeTodo()}, total: 1})
 
-	result, err := svc.ListTodos(context.Background(), query.ListTodos{UserID: 1, Page: 1, Limit: 10})
+	result, err := svc.GetList(context.Background(), query.List{UserID: 1, Page: 1, Limit: 10})
 	if err != nil {
 		t.Fatalf("ListTodos() error = %v", err)
 	}

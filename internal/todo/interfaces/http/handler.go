@@ -71,7 +71,7 @@ func (h *Handler) GetList(c *gin.Context) {
 	}
 	userID := c.GetUint("user_id")
 
-	result, err := h.queries.ListTodos(c.Request.Context(), query.ListTodos{
+	result, err := h.queries.GetList(c.Request.Context(), query.List{
 		UserID: userID,
 		Page:   page,
 		Limit:  limit,
@@ -92,7 +92,7 @@ func (h *Handler) Get(c *gin.Context) {
 	}
 
 	userID := c.GetUint("user_id")
-	result, err := h.queries.GetTodo(c.Request.Context(), query.GetTodo{
+	result, err := h.queries.Get(c.Request.Context(), query.Get{
 		UserID: userID,
 		TodoID: uint(id),
 	})

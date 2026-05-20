@@ -35,7 +35,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 func (h *Handler) GetMe(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	result, err := h.queries.GetUser(c.Request.Context(), query.GetUser{UserID: userID})
+	result, err := h.queries.GetProfile(c.Request.Context(), query.Get{UserID: userID})
 	if err != nil {
 		c.Error(err)
 		return

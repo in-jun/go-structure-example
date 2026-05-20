@@ -106,7 +106,7 @@ func main() {
 		usercmd.NewUpdateProfileHandler(userRepo),
 		usercmd.NewUpdatePasswordHandler(userRepo, hasher),
 		usercmd.NewDeleteHandler(userRepo),
-		userqry.NewGetUserHandler(userRepo),
+		userqry.NewGetHandler(userRepo),
 	)
 
 	todoService := todoapp.NewService(
@@ -114,8 +114,8 @@ func main() {
 		todocmd.NewUpdateHandler(todoRepo),
 		todocmd.NewUpdateStatusHandler(todoRepo),
 		todocmd.NewDeleteHandler(todoRepo),
-		todoqry.NewGetTodoHandler(todoRepo),
-		todoqry.NewListTodosHandler(todoRepo),
+		todoqry.NewGetHandler(todoRepo),
+		todoqry.NewListHandler(todoRepo),
 	)
 
 	authHandler := authhttp.NewHandler(authService, authQueries, validateToken)

@@ -34,7 +34,7 @@ func newTestService(repo *mockUserRepo) *service {
 		command.NewUpdateProfileHandler(repo),
 		command.NewUpdatePasswordHandler(repo, hasher),
 		command.NewDeleteHandler(repo),
-		query.NewGetUserHandler(repo),
+		query.NewGetHandler(repo),
 	)
 }
 
@@ -46,7 +46,7 @@ func makeUser() *entity.User {
 func TestUserService_GetUser(t *testing.T) {
 	svc := newTestService(&mockUserRepo{user: makeUser()})
 
-	result, err := svc.GetUser(context.Background(), query.GetUser{UserID: 1})
+	result, err := svc.GetProfile(context.Background(), query.Get{UserID: 1})
 	if err != nil {
 		t.Fatalf("GetUser() error = %v", err)
 	}
@@ -58,7 +58,7 @@ func TestUserService_GetUser(t *testing.T) {
 func TestUserService_GetUser_NotFound(t *testing.T) {
 	svc := newTestService(&mockUserRepo{err: errors.NotFound("user not found")})
 
-	_, err := svc.GetUser(context.Background(), query.GetUser{UserID: 99})
+	_, err := svc.GetProfile(context.Background(), query.Get{UserID: 99})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

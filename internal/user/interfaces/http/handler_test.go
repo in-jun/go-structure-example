@@ -29,11 +29,11 @@ func (m *mockCommandUseCase) UpdatePassword(_ context.Context, _ command.UpdateP
 func (m *mockCommandUseCase) Delete(_ context.Context, _ command.Delete) error { return m.err }
 
 type mockQueryUseCase struct {
-	userResult *query.UserResult
+	userResult *query.Result
 	err        error
 }
 
-func (m *mockQueryUseCase) GetUser(_ context.Context, _ query.GetUser) (*query.UserResult, error) {
+func (m *mockQueryUseCase) GetProfile(_ context.Context, _ query.Get) (*query.Result, error) {
 	return m.userResult, m.err
 }
 
@@ -54,7 +54,7 @@ func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *gin.En
 
 func TestHandler_GetMe(t *testing.T) {
 	qryMock := &mockQueryUseCase{
-		userResult: &query.UserResult{
+		userResult: &query.Result{
 			ID:        1,
 			Email:     "test@example.com",
 			Name:      "Test User",

@@ -26,7 +26,7 @@ type MessageResponse struct {
 	Message string `json:"message"`
 }
 
-func toTodoResponse(r *query.TodoResult) TodoResponse {
+func toTodoResponse(r *query.Result) TodoResponse {
 	return TodoResponse{
 		ID:          r.ID,
 		Title:       r.Title,
@@ -38,7 +38,7 @@ func toTodoResponse(r *query.TodoResult) TodoResponse {
 	}
 }
 
-func toTodoListResponse(r *query.TodoListResult) *TodoListResponse {
+func toTodoListResponse(r *query.ListResult) *TodoListResponse {
 	todos := make([]TodoResponse, 0, len(r.Todos))
 	for i := range r.Todos {
 		todos = append(todos, toTodoResponse(&r.Todos[i]))
