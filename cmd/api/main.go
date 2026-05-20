@@ -44,6 +44,14 @@ var (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		resp, err := http.Get("http://localhost:" + os.Getenv("APP_PORT") + "/health/ready")
+		if err != nil || resp.StatusCode != 200 {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	config.Load()
 	logging.Init("go-structure-example")
 
