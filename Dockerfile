@@ -16,4 +16,6 @@ COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /api /api
 COPY --from=builder /app/migrations /migrations
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD ["/api", "healthcheck"]
 ENTRYPOINT ["/api"]
