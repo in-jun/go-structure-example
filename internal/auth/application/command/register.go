@@ -7,6 +7,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/auth/domain/entity"
 	"github.com/in-jun/go-structure-example/internal/auth/domain/vo"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
 type Register struct {
@@ -18,10 +19,11 @@ type Register struct {
 type RegisterHandler struct {
 	userRepo       domain.UserRepository
 	passwordHasher domain.PasswordHasher
+	transactor     transaction.Transactor
 }
 
-func NewRegisterHandler(userRepo domain.UserRepository, passwordHasher domain.PasswordHasher) *RegisterHandler {
-	return &RegisterHandler{userRepo: userRepo, passwordHasher: passwordHasher}
+func NewRegisterHandler(userRepo domain.UserRepository, passwordHasher domain.PasswordHasher, transactor transaction.Transactor) *RegisterHandler {
+	return &RegisterHandler{userRepo: userRepo, passwordHasher: passwordHasher, transactor: transactor}
 }
 
 func (h *RegisterHandler) Handle(ctx context.Context, cmd Register) error {
@@ -30,23 +32,25 @@ func (h *RegisterHandler) Handle(ctx context.Context, cmd Register) error {
 		return errors.BadRequest(err.Error())
 	}
 
-	existing, err := h.userRepo.FindByEmail(ctx, v.Email)
-	if err != nil {
-		return err
-	}
-	if existing != nil {
-		return errors.Conflict("Email already registered")
-	}
-
 	hashedPassword, err := h.passwordHasher.Hash(v.Password)
 	if err != nil {
 		return errors.Internal("Failed to hash password")
 	}
 
-	user, err := entity.NewUser(v.Email, hashedPassword, v.Name)
-	if err != nil {
-		return errors.Internal("Failed to create user")
-	}
+	return h.transactor.WithinTransaction(ctx, func(txCtx context.Context) error {
+		existing, err := h.userRepo.FindByEmail(txCtx, v.Email)
+		if err != nil {
+			return err
+		}
+		if existing != nil {
+			return errors.Conflict("Email already registered")
+		}
 
-	return h.userRepo.Save(ctx, user)
+		user, err := entity.NewUser(v.Email, hashedPassword, v.Name)
+		if err != nil {
+			return errors.Internal("Failed to create user")
+		}
+
+		return h.userRepo.Save(txCtx, user)
+	})
 }

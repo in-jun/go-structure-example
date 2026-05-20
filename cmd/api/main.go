@@ -76,6 +76,7 @@ func main() {
 	hasher := crypto.NewBcryptHasher()
 
 	dbGetter := transaction.NewDBGetter(mysqlDB)
+	transactor := transaction.NewTransactor(mysqlDB)
 
 	tokenRepo := authredis.NewTokenRepository(redisClient)
 	authUserRepo := authmysql.NewUserRepository(dbGetter)
@@ -83,7 +84,7 @@ func main() {
 	todoRepo := todomysql.NewTodoRepository(dbGetter)
 
 	authService := authapp.NewService(
-		authcmd.NewRegisterHandler(authUserRepo, hasher),
+		authcmd.NewRegisterHandler(authUserRepo, hasher, transactor),
 		authcmd.NewLoginHandler(authUserRepo, tokenRepo, tokenGen, hasher),
 		authcmd.NewRefreshHandler(tokenRepo, tokenGen),
 		authcmd.NewLogoutHandler(tokenRepo, tokenGen),

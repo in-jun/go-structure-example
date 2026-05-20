@@ -12,6 +12,12 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 )
 
+type noopTransactor struct{}
+
+func (n *noopTransactor) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
+	return fn(ctx)
+}
+
 type mockUserRepo struct {
 	user *entity.User
 	err  error
@@ -80,7 +86,7 @@ func (m *mockHasher) Compare(hashed, plain string) bool    { return hashed == "h
 func newTestService(userRepo *mockUserRepo, tokenRepo *mockTokenRepo, tokenGen *mockTokenGen) *service {
 	hasher := &mockHasher{}
 	return NewService(
-		command.NewRegisterHandler(userRepo, hasher),
+		command.NewRegisterHandler(userRepo, hasher, &noopTransactor{}),
 		command.NewLoginHandler(userRepo, tokenRepo, tokenGen, hasher),
 		command.NewRefreshHandler(tokenRepo, tokenGen),
 		command.NewLogoutHandler(tokenRepo, tokenGen),
@@ -169,7 +175,7 @@ func (m *reuseDetectTokenRepo) FindUsedToken(_ context.Context, _ string) (uint,
 func newServiceWithRepo(tokenRepo domain.TokenRepository) *service {
 	tokenGen := &mockTokenGen{}
 	return &service{
-		register:  command.NewRegisterHandler(&mockUserRepo{}, &mockHasher{}),
+		register:  command.NewRegisterHandler(&mockUserRepo{}, &mockHasher{}, &noopTransactor{}),
 		login:     command.NewLoginHandler(&mockUserRepo{}, tokenRepo, tokenGen, &mockHasher{}),
 		refresh:   command.NewRefreshHandler(tokenRepo, tokenGen),
 		logout:    command.NewLogoutHandler(tokenRepo, tokenGen),
