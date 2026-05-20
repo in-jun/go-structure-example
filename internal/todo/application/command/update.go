@@ -6,6 +6,7 @@ import (
 
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/todo/domain"
+	"github.com/in-jun/go-structure-example/internal/todo/domain/vo"
 )
 
 type Update struct {
@@ -25,8 +26,9 @@ func NewUpdateHandler(todoRepo domain.TodoRepository) *UpdateHandler {
 }
 
 func (h *UpdateHandler) Handle(ctx context.Context, cmd Update) error {
-	if cmd.Title == "" {
-		return errors.BadRequest("Title is required")
+	v, err := vo.NewUpdateTodoVO(cmd.Title, cmd.Description, cmd.DueDate)
+	if err != nil {
+		return errors.BadRequest(err.Error())
 	}
 
 	t, err := h.todoRepo.FindByID(ctx, cmd.TodoID)
@@ -40,6 +42,6 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd Update) error {
 		return errors.Forbidden("Not authorized to update this todo")
 	}
 
-	t.Update(cmd.Title, cmd.Description, cmd.DueDate)
+	t.Update(v.Title, v.Description, v.DueDate)
 	return h.todoRepo.Update(ctx, t)
 }

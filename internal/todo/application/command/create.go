@@ -7,6 +7,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/todo/domain"
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
+	"github.com/in-jun/go-structure-example/internal/todo/domain/vo"
 )
 
 type Create struct {
@@ -29,11 +30,12 @@ func NewCreateHandler(todoRepo domain.TodoRepository) *CreateHandler {
 }
 
 func (h *CreateHandler) Handle(ctx context.Context, cmd Create) (*CreateResult, error) {
-	if cmd.Title == "" {
-		return nil, errors.BadRequest("Title is required")
+	v, err := vo.NewCreateTodoVO(cmd.Title, cmd.Description, cmd.DueDate)
+	if err != nil {
+		return nil, errors.BadRequest(err.Error())
 	}
 
-	t, err := entity.NewTodo(cmd.UserID, cmd.Title, cmd.Description, cmd.DueDate)
+	t, err := entity.NewTodo(cmd.UserID, v.Title, v.Description, v.DueDate)
 	if err != nil {
 		return nil, errors.BadRequest(err.Error())
 	}

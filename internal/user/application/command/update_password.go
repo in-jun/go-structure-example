@@ -5,6 +5,7 @@ import (
 
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/user/domain"
+	"github.com/in-jun/go-structure-example/internal/user/domain/vo"
 )
 
 type UpdatePassword struct {
@@ -23,11 +24,9 @@ func NewUpdatePasswordHandler(userRepo domain.UserRepository, passwordHasher dom
 }
 
 func (h *UpdatePasswordHandler) Handle(ctx context.Context, cmd UpdatePassword) error {
-	if cmd.CurrentPassword == "" || cmd.NewPassword == "" {
-		return errors.BadRequest("Current and new password are required")
-	}
-	if len(cmd.NewPassword) < 6 {
-		return errors.BadRequest("New password must be at least 6 characters")
+	v, err := vo.NewUpdatePasswordVO(cmd.CurrentPassword, cmd.NewPassword)
+	if err != nil {
+		return errors.BadRequest(err.Error())
 	}
 
 	u, err := h.userRepo.FindByID(ctx, cmd.UserID)
@@ -38,11 +37,11 @@ func (h *UpdatePasswordHandler) Handle(ctx context.Context, cmd UpdatePassword) 
 		return errors.NotFound("User not found")
 	}
 
-	if !h.passwordHasher.Compare(u.HashedPassword(), cmd.CurrentPassword) {
+	if !h.passwordHasher.Compare(u.HashedPassword(), v.CurrentPassword) {
 		return errors.Unauthorized("Current password is incorrect")
 	}
 
-	hashed, err := h.passwordHasher.Hash(cmd.NewPassword)
+	hashed, err := h.passwordHasher.Hash(v.NewPassword)
 	if err != nil {
 		return errors.Internal("Failed to hash password")
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/todo/domain"
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
+	"github.com/in-jun/go-structure-example/internal/todo/domain/vo"
 )
 
 type UpdateStatus struct {
@@ -23,6 +24,11 @@ func NewUpdateStatusHandler(todoRepo domain.TodoRepository) *UpdateStatusHandler
 }
 
 func (h *UpdateStatusHandler) Handle(ctx context.Context, cmd UpdateStatus) error {
+	v, err := vo.NewUpdateStatusVO(cmd.Status)
+	if err != nil {
+		return errors.BadRequest(err.Error())
+	}
+
 	t, err := h.todoRepo.FindByID(ctx, cmd.TodoID)
 	if err != nil {
 		return err
@@ -34,6 +40,6 @@ func (h *UpdateStatusHandler) Handle(ctx context.Context, cmd UpdateStatus) erro
 		return errors.Forbidden("Not authorized to update this todo")
 	}
 
-	t.SetStatus(cmd.Status)
+	t.SetStatus(v.Status)
 	return h.todoRepo.Update(ctx, t)
 }

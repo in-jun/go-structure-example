@@ -5,6 +5,7 @@ import (
 
 	apperrors "github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/user/domain"
+	"github.com/in-jun/go-structure-example/internal/user/domain/vo"
 )
 
 type UpdateProfile struct {
@@ -21,8 +22,9 @@ func NewUpdateProfileHandler(userRepo domain.UserRepository) *UpdateProfileHandl
 }
 
 func (h *UpdateProfileHandler) Handle(ctx context.Context, cmd UpdateProfile) error {
-	if cmd.Name == "" {
-		return apperrors.BadRequest("Name is required")
+	v, err := vo.NewUpdateProfileVO(cmd.Name)
+	if err != nil {
+		return apperrors.BadRequest(err.Error())
 	}
 
 	u, err := h.userRepo.FindByID(ctx, cmd.UserID)
@@ -33,6 +35,6 @@ func (h *UpdateProfileHandler) Handle(ctx context.Context, cmd UpdateProfile) er
 		return apperrors.NotFound("User not found")
 	}
 
-	u.SetName(cmd.Name)
+	u.SetName(v.Name)
 	return h.userRepo.Update(ctx, u)
 }
