@@ -48,7 +48,7 @@ func Conflict(message string) CustomError {
 }
 
 func TooManyRequests(message string) CustomError {
-	return CustomError{Status: http.StatusTooManyRequests, Code: "TOO_MANY_REQUESTS", Message: message}
+	return CustomError{Status: http.StatusTooManyRequests, Code: "RATE_LIMIT_EXCEEDED", Message: message}
 }
 
 func Internal(message string) CustomError {

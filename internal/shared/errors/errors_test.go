@@ -21,11 +21,12 @@ func TestErrorFactories(t *testing.T) {
 		wantCode   string
 	}{
 		{"BadRequest", BadRequest, http.StatusBadRequest, "BAD_REQUEST"},
+		{"ValidationError", ValidationError, http.StatusBadRequest, "VALIDATION_ERROR"},
 		{"Unauthorized", Unauthorized, http.StatusUnauthorized, "UNAUTHORIZED"},
 		{"Forbidden", Forbidden, http.StatusForbidden, "FORBIDDEN"},
 		{"NotFound", NotFound, http.StatusNotFound, "NOT_FOUND"},
 		{"Conflict", Conflict, http.StatusConflict, "CONFLICT"},
-		{"TooManyRequests", TooManyRequests, http.StatusTooManyRequests, "TOO_MANY_REQUESTS"},
+		{"TooManyRequests", TooManyRequests, http.StatusTooManyRequests, "RATE_LIMIT_EXCEEDED"},
 		{"Internal", Internal, http.StatusInternalServerError, "INTERNAL_ERROR"},
 	}
 
