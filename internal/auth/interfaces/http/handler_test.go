@@ -217,3 +217,15 @@ func TestHandler_Logout_MissingAuth(t *testing.T) {
 		t.Errorf("expected 401, got %d", w.Code)
 	}
 }
+
+func TestHandler_LogoutAll_MissingAuth(t *testing.T) {
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/auth/logout/all", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
