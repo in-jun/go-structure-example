@@ -35,8 +35,8 @@ func (h *LogoutHandler) Handle(ctx context.Context, cmd Logout) error {
 
 	if cmd.AccessTokenJTI != "" {
 		ttl := time.Duration(h.tokenGen.AccessExpirySeconds()) * time.Second
-		if err2 := h.tokenRepo.BlacklistAccessToken(ctx, cmd.AccessTokenJTI, ttl); err2 != nil {
-			return err2
+		if err := h.tokenRepo.BlacklistAccessToken(ctx, cmd.AccessTokenJTI, ttl); err != nil {
+			return err
 		}
 	}
 
