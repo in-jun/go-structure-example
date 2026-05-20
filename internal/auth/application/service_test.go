@@ -218,3 +218,26 @@ func TestAuthService_LogoutAll(t *testing.T) {
 		t.Fatalf("LogoutAll() error = %v", err)
 	}
 }
+
+func TestAuthService_ValidateToken(t *testing.T) {
+	claims := &domain.TokenClaims{UserID: 1, JTI: "jti-1", IssuedAt: 12345}
+	tokenGen := &mockTokenGen{claims: claims}
+	svc := newTestService(&mockUserRepo{}, &mockTokenRepo{}, tokenGen)
+
+	result, err := svc.ValidateToken(context.Background(), query.Validate{TokenString: "valid-token"})
+	if err != nil {
+		t.Fatalf("ValidateToken() error = %v", err)
+	}
+	if result.UserID != 1 {
+		t.Errorf("expected UserID 1, got %d", result.UserID)
+	}
+}
+
+func TestAuthService_ValidateToken_Invalid(t *testing.T) {
+	svc := newTestService(&mockUserRepo{}, &mockTokenRepo{}, &mockTokenGen{err: errors.Unauthorized("invalid token")})
+
+	_, err := svc.ValidateToken(context.Background(), query.Validate{TokenString: "bad-token"})
+	if err == nil {
+		t.Fatal("expected error for invalid token, got nil")
+	}
+}
