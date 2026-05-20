@@ -36,6 +36,12 @@ import (
 	userhttp "github.com/in-jun/go-structure-example/internal/user/interfaces/http"
 )
 
+var (
+	Version   = "dev"
+	BuildTime = "unknown"
+	GitCommit = "unknown"
+)
+
 func main() {
 	config.Load()
 	logging.Init("go-structure-example")
@@ -115,7 +121,7 @@ func main() {
 	userHandler := userhttp.NewHandler(userService, userService, validateToken)
 	todoHandler := todohttp.NewHandler(todoService, todoService, validateToken)
 
-	healthChecker := health.NewChecker(mysqlDB).WithRedis(redisClient)
+	healthChecker := health.NewChecker(mysqlDB).WithRedis(redisClient).WithBuildInfo(Version, BuildTime, GitCommit)
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.RequestID())
