@@ -59,18 +59,17 @@ func (m *mockTokenRepo) IsRevokedForUser(_ context.Context, _ uint, _ int64) (bo
 	return false, m.err
 }
 
+var _ domain.TokenRepository = (*mockTokenRepo)(nil)
+var _ domain.UserRepository = (*mockUserRepo)(nil)
+
 type mockTokenGen struct {
-	accessToken  string
-	refreshToken string
-	claims       *domain.TokenClaims
-	err          error
+	accessToken string
+	claims      *domain.TokenClaims
+	err         error
 }
 
 func (m *mockTokenGen) GenerateAccessToken(_ uint) (string, error) {
 	return m.accessToken, m.err
-}
-func (m *mockTokenGen) GenerateRefreshToken(_ uint) (string, error) {
-	return m.refreshToken, m.err
 }
 func (m *mockTokenGen) ValidateToken(_ string) (*domain.TokenClaims, error) {
 	return m.claims, m.err
@@ -124,7 +123,7 @@ func TestAuthService_Register_DuplicateEmail(t *testing.T) {
 
 func TestAuthService_Login(t *testing.T) {
 	user, _ := entity.ReconstructUser(1, "test@example.com", "hashed_password123", "Test", time.Now(), time.Now())
-	tokenGen := &mockTokenGen{accessToken: "access-token", refreshToken: "refresh-token"}
+	tokenGen := &mockTokenGen{accessToken: "access-token"}
 	svc := newTestService(&mockUserRepo{user: user}, &mockTokenRepo{}, tokenGen)
 
 	result, err := svc.Login(context.Background(), command.Login{
