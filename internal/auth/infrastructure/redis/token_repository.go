@@ -129,6 +129,34 @@ func (r *tokenRepository) DeleteByToken(ctx context.Context, tokenStr string) er
 	return nil
 }
 
+const usedTokenTTL = 7 * 24 * time.Hour
+
+func (r *tokenRepository) usedKey(token string) string {
+	return fmt.Sprintf("rt:used:%s", token)
+}
+
+func (r *tokenRepository) MarkTokenUsed(ctx context.Context, token string, userID uint) error {
+	if err := r.client.Set(ctx, r.usedKey(token), fmt.Sprintf("%d", userID), usedTokenTTL).Err(); err != nil {
+		return errors.Internal("Failed to mark token as used")
+	}
+	return nil
+}
+
+func (r *tokenRepository) FindUsedToken(ctx context.Context, token string) (uint, error) {
+	val, err := r.client.Get(ctx, r.usedKey(token)).Result()
+	if stderrors.Is(err, goredis.Nil) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, errors.Internal("Failed to check used token")
+	}
+	var userID uint
+	if _, err := fmt.Sscanf(val, "%d", &userID); err != nil {
+		return 0, errors.Internal("Failed to parse used token user ID")
+	}
+	return userID, nil
+}
+
 func (r *tokenRepository) BlacklistAccessToken(ctx context.Context, jti string, ttl time.Duration) error {
 	if err := r.client.Set(ctx, r.blacklistKey(jti), "1", ttl).Err(); err != nil {
 		return errors.Internal("Failed to blacklist access token")

@@ -33,8 +33,12 @@ func (m *mockTokenRepo) Save(_ context.Context, _ *entity.RefreshToken) error   
 func (m *mockTokenRepo) FindByToken(_ context.Context, _ string) (*entity.RefreshToken, error) {
 	return m.token, m.err
 }
-func (m *mockTokenRepo) DeleteByUserID(_ context.Context, _ uint) error            { return m.err }
-func (m *mockTokenRepo) DeleteByToken(_ context.Context, _ string) error           { return m.err }
+func (m *mockTokenRepo) DeleteByUserID(_ context.Context, _ uint) error  { return m.err }
+func (m *mockTokenRepo) DeleteByToken(_ context.Context, _ string) error { return m.err }
+func (m *mockTokenRepo) MarkTokenUsed(_ context.Context, _ string, _ uint) error { return m.err }
+func (m *mockTokenRepo) FindUsedToken(_ context.Context, _ string) (uint, error) {
+	return 0, m.err
+}
 func (m *mockTokenRepo) BlacklistAccessToken(_ context.Context, _ string, _ time.Duration) error {
 	return m.err
 }
@@ -149,6 +153,34 @@ func TestAuthService_Login_UserNotFound(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for user not found, got nil")
+	}
+}
+
+type reuseDetectTokenRepo struct {
+	mockTokenRepo
+}
+
+func (m *reuseDetectTokenRepo) FindUsedToken(_ context.Context, _ string) (uint, error) {
+	return 42, nil // non-zero: token was previously used (theft attempt)
+}
+
+func newServiceWithRepo(tokenRepo domain.TokenRepository) *service {
+	tokenGen := &mockTokenGen{}
+	return &service{
+		register:  command.NewRegisterHandler(&mockUserRepo{}, &mockHasher{}),
+		login:     command.NewLoginHandler(&mockUserRepo{}, tokenRepo, tokenGen, &mockHasher{}),
+		refresh:   command.NewRefreshHandler(tokenRepo, tokenGen),
+		logout:    command.NewLogoutHandler(tokenRepo, tokenGen),
+		logoutAll: command.NewLogoutAllHandler(tokenRepo, tokenGen),
+	}
+}
+
+func TestAuthService_Refresh_TokenReuseDetected(t *testing.T) {
+	svc := newServiceWithRepo(&reuseDetectTokenRepo{})
+
+	_, err := svc.Refresh(context.Background(), command.Refresh{RefreshToken: "already-used-token"})
+	if err == nil {
+		t.Fatal("expected error for token reuse, got nil")
 	}
 }
 

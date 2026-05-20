@@ -6,6 +6,7 @@ import (
 
 	"github.com/in-jun/go-structure-example/internal/auth/domain"
 	"github.com/in-jun/go-structure-example/internal/auth/domain/entity"
+	"github.com/in-jun/go-structure-example/internal/auth/domain/vo"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 )
 
@@ -29,24 +30,38 @@ func NewRefreshHandler(tokenRepo domain.TokenRepository, tokenGen domain.TokenGe
 }
 
 func (h *RefreshHandler) Handle(ctx context.Context, cmd Refresh) (*RefreshResult, error) {
-	if cmd.RefreshToken == "" {
-		return nil, errors.BadRequest("Refresh token is required")
+	v, err := vo.NewRefreshTokenVO(cmd.RefreshToken)
+	if err != nil {
+		return nil, errors.BadRequest(err.Error())
 	}
 
-	old, err := h.tokenRepo.FindByToken(ctx, cmd.RefreshToken)
+	old, err := h.tokenRepo.FindByToken(ctx, v.Token)
 	if err != nil {
 		return nil, err
 	}
 	if old == nil {
+		// Token not found — check if it was already used (possible theft attempt)
+		userID, err := h.tokenRepo.FindUsedToken(ctx, v.Token)
+		if err != nil {
+			return nil, err
+		}
+		if userID != 0 {
+			_ = h.tokenRepo.DeleteByUserID(ctx, userID)
+			return nil, errors.Unauthorized("Token reuse detected, all sessions revoked")
+		}
 		return nil, errors.Unauthorized("Invalid refresh token")
 	}
 
 	if old.IsExpired() {
-		_ = h.tokenRepo.DeleteByToken(ctx, cmd.RefreshToken)
+		_ = h.tokenRepo.DeleteByToken(ctx, v.Token)
 		return nil, errors.Unauthorized("Refresh token expired")
 	}
 
-	if err := h.tokenRepo.DeleteByToken(ctx, cmd.RefreshToken); err != nil {
+	if err := h.tokenRepo.DeleteByToken(ctx, v.Token); err != nil {
+		return nil, err
+	}
+	// Mark token as used so reuse can be detected
+	if err := h.tokenRepo.MarkTokenUsed(ctx, v.Token, old.UserID()); err != nil {
 		return nil, err
 	}
 

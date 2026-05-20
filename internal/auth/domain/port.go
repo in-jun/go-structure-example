@@ -17,6 +17,8 @@ type TokenRepository interface {
 	FindByToken(ctx context.Context, token string) (*entity.RefreshToken, error)
 	DeleteByUserID(ctx context.Context, userID uint) error
 	DeleteByToken(ctx context.Context, token string) error
+	MarkTokenUsed(ctx context.Context, token string, userID uint) error
+	FindUsedToken(ctx context.Context, token string) (uint, error)
 	BlacklistAccessToken(ctx context.Context, jti string, ttl time.Duration) error
 	IsAccessTokenBlacklisted(ctx context.Context, jti string) (bool, error)
 	RevokeAllAccessTokens(ctx context.Context, userID uint, ttl time.Duration) error
