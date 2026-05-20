@@ -360,3 +360,19 @@ func TestTimeout_Exceeded(t *testing.T) {
 		t.Errorf("expected 504, got %d", w.Code)
 	}
 }
+
+func TestAccessLog(t *testing.T) {
+	r := newTestEngine(AccessLog())
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "1.2.3.4:5678"
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
