@@ -2,6 +2,13 @@ package vo
 
 import "errors"
 
+var (
+	errCurrentPasswordRequired = errors.New("current password is required")
+	errNewPasswordRequired     = errors.New("new password is required")
+	errNewPasswordTooShort     = errors.New("new password must be at least 6 characters")
+	errPasswordSame            = errors.New("new password must be different from current password")
+)
+
 type UpdatePasswordVO struct {
 	CurrentPassword string
 	NewPassword     string
@@ -9,16 +16,16 @@ type UpdatePasswordVO struct {
 
 func NewUpdatePasswordVO(currentPassword, newPassword string) (*UpdatePasswordVO, error) {
 	if currentPassword == "" {
-		return nil, errors.New("current password is required")
+		return nil, errCurrentPasswordRequired
 	}
 	if newPassword == "" {
-		return nil, errors.New("new password is required")
+		return nil, errNewPasswordRequired
 	}
 	if len(newPassword) < 6 {
-		return nil, errors.New("new password must be at least 6 characters")
+		return nil, errNewPasswordTooShort
 	}
 	if currentPassword == newPassword {
-		return nil, errors.New("new password must be different from current password")
+		return nil, errPasswordSame
 	}
 	return &UpdatePasswordVO{CurrentPassword: currentPassword, NewPassword: newPassword}, nil
 }

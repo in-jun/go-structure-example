@@ -5,6 +5,12 @@ import (
 	"net/mail"
 )
 
+var (
+	errInvalidRegister         = errors.New("valid email, password (min 6 chars), and name are required")
+	errInvalidRegisterEmail    = errors.New("invalid email format")
+	errInvalidRegisterPassword = errors.New("password must be at least 6 characters")
+)
+
 type RegisterVO struct {
 	Email    string
 	Password string
@@ -13,13 +19,13 @@ type RegisterVO struct {
 
 func NewRegisterVO(email, password, name string) (*RegisterVO, error) {
 	if email == "" || password == "" || name == "" {
-		return nil, errors.New("email, password, and name are required")
+		return nil, errInvalidRegister
 	}
 	if _, err := mail.ParseAddress(email); err != nil {
-		return nil, errors.New("invalid email format")
+		return nil, errInvalidRegisterEmail
 	}
 	if len(password) < 6 {
-		return nil, errors.New("password must be at least 6 characters")
+		return nil, errInvalidRegisterPassword
 	}
 	return &RegisterVO{Email: email, Password: password, Name: name}, nil
 }
