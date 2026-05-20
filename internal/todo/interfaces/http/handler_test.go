@@ -231,6 +231,33 @@ func TestHandler_Update_BadJSON(t *testing.T) {
 	}
 }
 
+func TestHandler_UpdateStatus_BadJSON(t *testing.T) {
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("PATCH", "/api/v1/todos/1/status", bytes.NewReader([]byte("{invalid}")))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer valid-token")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandler_Get_Forbidden(t *testing.T) {
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{err: errors.Forbidden("access denied")})
+	req := httptest.NewRequest("GET", "/api/v1/todos/1", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
+	}
+}
+
 func TestHandler_MissingAuth(t *testing.T) {
 	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	req := httptest.NewRequest("GET", "/api/v1/todos", nil)
