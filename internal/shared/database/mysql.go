@@ -2,7 +2,10 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/in-jun/go-structure-example/internal/shared/config"
 
@@ -13,7 +16,7 @@ import (
 )
 
 func NewMySQL() (*sql.DB, error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&multiStatements=true",
 		config.AppConfig.MySQLUsername,
 		config.AppConfig.MySQLPassword,
 		config.AppConfig.MySQLHost,
@@ -25,6 +28,15 @@ func NewMySQL() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if config.AppConfig.MySQLMaxOpenConns > 0 {
+		db.SetMaxOpenConns(config.AppConfig.MySQLMaxOpenConns)
+	}
+	if config.AppConfig.MySQLMaxIdleConns > 0 {
+		db.SetMaxIdleConns(config.AppConfig.MySQLMaxIdleConns)
+	}
+	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(3 * time.Minute)
 
 	if err := db.Ping(); err != nil {
 		return nil, err
@@ -53,7 +65,7 @@ func runMigrations(db *sql.DB) error {
 	}
 
 	version, dirty, err := m.Version()
-	if err != nil && err != migrate.ErrNilVersion {
+	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
 		return fmt.Errorf("failed to get migration version: %w", err)
 	}
 
@@ -61,9 +73,10 @@ func runMigrations(db *sql.DB) error {
 		return fmt.Errorf("dirty migration at version %d — manual intervention required", version)
 	}
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
+	slog.Info("migrations applied", "version", version)
 	return nil
 }
