@@ -154,6 +154,34 @@ func TestHandler_DeleteMe(t *testing.T) {
 	}
 }
 
+func TestHandler_UpdateProfile_BadJSON(t *testing.T) {
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("PATCH", "/api/v1/users/me/profile", bytes.NewReader([]byte("{invalid}")))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer valid-token")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandler_UpdatePassword_BadJSON(t *testing.T) {
+	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("PATCH", "/api/v1/users/me/password", bytes.NewReader([]byte("{invalid}")))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer valid-token")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
 func TestHandler_MissingAuth(t *testing.T) {
 	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	req := httptest.NewRequest("GET", "/api/v1/users/me", nil)
