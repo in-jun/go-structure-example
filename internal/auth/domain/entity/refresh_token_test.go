@@ -10,7 +10,7 @@ func TestNewRefreshToken(t *testing.T) {
 		name      string
 		userID    uint
 		expiresAt time.Time
-		wantErr   bool
+		wantError bool
 	}{
 		{"valid", 1, time.Now().Add(time.Hour), false},
 		{"zero userID", 0, time.Now().Add(time.Hour), true},
@@ -20,20 +20,17 @@ func TestNewRefreshToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			token, err := NewRefreshToken(tt.userID, tt.expiresAt)
-			if tt.wantErr {
-				if err == nil {
-					t.Error("expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-				if token.Token() == "" {
-					t.Error("expected non-empty token")
-				}
-				if token.UserID() != tt.userID {
-					t.Errorf("expected userID %d, got %d", tt.userID, token.UserID())
-				}
+			if tt.wantError && err == nil {
+				t.Errorf("expected error, got %+v", token)
+			}
+			if !tt.wantError && err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+			if !tt.wantError && token.Token() == "" {
+				t.Error("expected non-empty token")
+			}
+			if !tt.wantError && token.UserID() != tt.userID {
+				t.Errorf("expected userID %d, got %d", tt.userID, token.UserID())
 			}
 		})
 	}
@@ -51,23 +48,34 @@ func TestRefreshToken_IsExpired(t *testing.T) {
 	}
 }
 
-func TestReconstructRefreshToken_Validation(t *testing.T) {
+func TestReconstructRefreshToken(t *testing.T) {
 	now := time.Now().Add(time.Hour)
 
-	if _, err := ReconstructRefreshToken("", 1, now); err == nil {
-		t.Error("expected error for empty token")
+	tests := []struct {
+		name      string
+		token     string
+		userID    uint
+		expiresAt time.Time
+		wantError bool
+	}{
+		{"valid", "tok", 1, now, false},
+		{"empty token", "", 1, now, true},
+		{"zero userID", "tok", 0, now, true},
+		{"zero expiresAt", "tok", 1, time.Time{}, true},
 	}
-	if _, err := ReconstructRefreshToken("tok", 0, now); err == nil {
-		t.Error("expected error for zero userID")
-	}
-	if _, err := ReconstructRefreshToken("tok", 1, time.Time{}); err == nil {
-		t.Error("expected error for zero expiresAt")
-	}
-	rt, err := ReconstructRefreshToken("tok", 1, now)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if rt.Token() != "tok" {
-		t.Errorf("expected token 'tok', got %q", rt.Token())
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rt, err := ReconstructRefreshToken(tt.token, tt.userID, tt.expiresAt)
+			if tt.wantError && err == nil {
+				t.Errorf("expected error, got %+v", rt)
+			}
+			if !tt.wantError && err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+			if !tt.wantError && rt.Token() != tt.token {
+				t.Errorf("Token = %q, want %q", rt.Token(), tt.token)
+			}
+		})
 	}
 }
