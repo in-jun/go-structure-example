@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
 )
 
@@ -42,5 +43,14 @@ func TestListHandler_Empty(t *testing.T) {
 	}
 	if len(result.Todos) != 0 {
 		t.Errorf("len(Todos) = %d, want 0", len(result.Todos))
+	}
+}
+
+func TestListHandler_RepositoryError(t *testing.T) {
+	h := NewListHandler(&mockTodoRepo{err: errors.Internal("db error")})
+
+	_, err := h.Handle(context.Background(), List{UserID: 1, Page: 1, Limit: 10})
+	if err == nil {
+		t.Fatal("expected error for repository failure, got nil")
 	}
 }
