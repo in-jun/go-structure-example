@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/gin-gonic/gin"
 
@@ -34,17 +38,20 @@ func main() {
 	config.Load()
 	logging.Init("go-structure-example")
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	redisClient, err := database.NewRedis()
 	if err != nil {
 		slog.Error("failed to connect to Redis", "error", err)
-		return
+		os.Exit(1)
 	}
 	defer redisClient.Close()
 
 	mysqlDB, err := database.NewMySQL()
 	if err != nil {
 		slog.Error("failed to connect to MySQL", "error", err)
-		return
+		os.Exit(1)
 	}
 	defer mysqlDB.Close()
 
@@ -55,7 +62,7 @@ func main() {
 	)
 	if err != nil {
 		slog.Error("failed to create token generator", "error", err)
-		return
+		os.Exit(1)
 	}
 
 	hasher := crypto.NewBcryptHasher()
@@ -110,7 +117,7 @@ func main() {
 	router.Use(middleware.SecurityHeaders())
 	router.Use(middleware.AccessLog())
 	router.Use(middleware.CORS())
-	router.Use(middleware.RateLimit(redisClient, 100))
+	router.Use(middleware.RateLimit(redisClient, config.AppConfig.RateLimitBurst))
 	router.Use(middleware.ErrorHandler())
 
 	api := router.Group("/api/v1")
@@ -120,8 +127,28 @@ func main() {
 		todoHandler.RegisterRoutes(api)
 	}
 
-	slog.Info("server starting", "port", config.AppConfig.AppPort)
-	if err := router.Run(":" + config.AppConfig.AppPort); err != nil {
-		slog.Error("server failed", "error", err)
+	srv := &http.Server{
+		Addr:    ":" + config.AppConfig.AppPort,
+		Handler: router,
 	}
+
+	go func() {
+		slog.Info("server starting", "port", config.AppConfig.AppPort)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), config.AppConfig.ShutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("server forced to shutdown", "error", err)
+	}
+
+	slog.Info("server stopped")
 }
