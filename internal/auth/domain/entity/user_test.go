@@ -51,19 +51,42 @@ func TestNewUser(t *testing.T) {
 func TestReconstructUser(t *testing.T) {
 	now := time.Now()
 
-	u, err := ReconstructUser(1, "test@example.com", "hashed", "Test", now, now)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if u.ID() != 1 {
-		t.Errorf("expected ID 1, got %d", u.ID())
-	}
-	if u.Email() != "test@example.com" {
-		t.Errorf("expected email test@example.com, got %q", u.Email())
-	}
-	if u.Name() != "Test" {
-		t.Errorf("expected name Test, got %q", u.Name())
-	}
+	t.Run("valid", func(t *testing.T) {
+		u, err := ReconstructUser(1, "test@example.com", "hashed", "Test", now, now)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if u.ID() != 1 {
+			t.Errorf("expected ID 1, got %d", u.ID())
+		}
+		if u.Email() != "test@example.com" {
+			t.Errorf("expected email test@example.com, got %q", u.Email())
+		}
+		if u.Name() != "Test" {
+			t.Errorf("expected name Test, got %q", u.Name())
+		}
+	})
+
+	t.Run("zero id", func(t *testing.T) {
+		_, err := ReconstructUser(0, "test@example.com", "hashed", "Test", now, now)
+		if err == nil {
+			t.Error("expected error for zero id")
+		}
+	})
+
+	t.Run("empty email", func(t *testing.T) {
+		_, err := ReconstructUser(1, "", "hashed", "Test", now, now)
+		if err == nil {
+			t.Error("expected error for empty email")
+		}
+	})
+
+	t.Run("empty password", func(t *testing.T) {
+		_, err := ReconstructUser(1, "test@example.com", "", "Test", now, now)
+		if err == nil {
+			t.Error("expected error for empty password")
+		}
+	})
 }
 
 func TestUser_SetID(t *testing.T) {
