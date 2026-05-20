@@ -147,3 +147,55 @@ func TestErrorHandler_NoError(t *testing.T) {
 		t.Errorf("expected 200, got %d", w.Code)
 	}
 }
+
+func TestRequestID_GeneratesID(t *testing.T) {
+	r := newTestEngine(RequestID())
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Header().Get("X-Request-ID") == "" {
+		t.Error("expected X-Request-ID header to be set")
+	}
+}
+
+func TestRequestID_PropagatesExisting(t *testing.T) {
+	r := newTestEngine(RequestID())
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("X-Request-ID", "existing-id")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if got := w.Header().Get("X-Request-ID"); got != "existing-id" {
+		t.Errorf("expected 'existing-id', got %q", got)
+	}
+}
+
+func TestSecurityHeaders(t *testing.T) {
+	r := newTestEngine(SecurityHeaders())
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if v := w.Header().Get("X-Content-Type-Options"); v != "nosniff" {
+		t.Errorf("expected 'nosniff', got %q", v)
+	}
+	if v := w.Header().Get("X-Frame-Options"); v != "DENY" {
+		t.Errorf("expected 'DENY', got %q", v)
+	}
+	if v := w.Header().Get("Referrer-Policy"); v != "strict-origin-when-cross-origin" {
+		t.Errorf("expected 'strict-origin-when-cross-origin', got %q", v)
+	}
+}
