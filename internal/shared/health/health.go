@@ -57,10 +57,10 @@ func (c *Checker) readyHandler(ctx *gin.Context) {
 		tctx, cancel := context.WithTimeout(ctx.Request.Context(), 2*time.Second)
 		defer cancel()
 		if err := c.db.PingContext(tctx); err != nil {
-			checks["mysql"] = "unhealthy: " + err.Error()
+			checks["postgres"] = "unhealthy: " + err.Error()
 			ready = false
 		} else {
-			checks["mysql"] = "healthy"
+			checks["postgres"] = "healthy"
 		}
 	}
 

@@ -5,19 +5,21 @@ import (
 	"time"
 )
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+
 func TestReconstructUser(t *testing.T) {
 	now := time.Now()
 	tests := []struct {
 		name      string
-		id        uint
+		id        string
 		email     string
 		userName  string
 		wantError bool
 	}{
-		{"valid", 1, "test@example.com", "Test User", false},
-		{"zero id", 0, "test@example.com", "Test User", true},
-		{"empty email", 1, "", "Test User", true},
-		{"empty name", 1, "test@example.com", "", true},
+		{"valid", testUUID, "test@example.com", "Test User", false},
+		{"empty id", "", "test@example.com", "Test User", true},
+		{"empty email", testUUID, "", "Test User", true},
+		{"empty name", testUUID, "test@example.com", "", true},
 	}
 
 	for _, tt := range tests {
@@ -35,7 +37,7 @@ func TestReconstructUser(t *testing.T) {
 
 func TestUser_SetName(t *testing.T) {
 	now := time.Now()
-	u, _ := ReconstructUser(1, "test@example.com", "hashed", "Original", now, now)
+	u, _ := ReconstructUser(testUUID, "test@example.com", "hashed", "Original", now, now)
 
 	u.SetName("Updated")
 	if u.Name() != "Updated" {
@@ -48,7 +50,7 @@ func TestUser_SetName(t *testing.T) {
 
 func TestUser_SetPassword(t *testing.T) {
 	now := time.Now()
-	u, _ := ReconstructUser(1, "test@example.com", "old_hash", "Test", now, now)
+	u, _ := ReconstructUser(testUUID, "test@example.com", "old_hash", "Test", now, now)
 
 	u.SetPassword("new_hash")
 	if u.HashedPassword() != "new_hash" {

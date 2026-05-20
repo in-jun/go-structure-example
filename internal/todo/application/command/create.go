@@ -11,14 +11,14 @@ import (
 )
 
 type Create struct {
-	UserID      uint
+	UserID      string
 	Title       string
 	Description string
 	DueDate     time.Time
 }
 
 type CreateResult struct {
-	ID uint
+	ID string
 }
 
 type CreateHandler struct {

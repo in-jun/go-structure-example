@@ -25,15 +25,16 @@ func newTestEngine(mw ...gin.HandlerFunc) *gin.Engine {
 }
 
 func TestAuth_ValidToken(t *testing.T) {
+	const wantID = "550e8400-e29b-41d4-a716-446655440000"
 	validator := TokenValidator(func(ctx context.Context, token string) (*ValidateTokenResult, error) {
-		return &ValidateTokenResult{UserID: 42, JTI: "jti-123"}, nil
+		return &ValidateTokenResult{UserID: wantID, JTI: "jti-123"}, nil
 	})
 
 	r := newTestEngine(ErrorHandler())
 	r.GET("/test", Auth(validator), func(c *gin.Context) {
-		uid := c.GetUint("user_id")
-		if uid != 42 {
-			t.Errorf("expected userID 42, got %d", uid)
+		uid := c.GetString("user_id")
+		if uid != wantID {
+			t.Errorf("expected userID %q, got %q", wantID, uid)
 		}
 		c.Status(http.StatusOK)
 	})

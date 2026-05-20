@@ -10,12 +10,12 @@ import (
 )
 
 type Get struct {
-	UserID uint
-	TodoID uint
+	UserID string
+	TodoID string
 }
 
 type Result struct {
-	ID          uint
+	ID          string
 	Title       string
 	Description string
 	Status      entity.Status

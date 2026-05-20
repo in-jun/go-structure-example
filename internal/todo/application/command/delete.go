@@ -8,8 +8,8 @@ import (
 )
 
 type Delete struct {
-	UserID uint
-	TodoID uint
+	UserID string
+	TodoID string
 }
 
 type DeleteHandler struct {

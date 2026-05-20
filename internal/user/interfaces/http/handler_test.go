@@ -17,6 +17,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/user/application/query"
 )
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+
 type mockCommandUseCase struct {
 	err error
 }
@@ -47,7 +49,7 @@ func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *gin.En
 	r.Use(middleware.ErrorHandler())
 
 	tokenValidator := middleware.TokenValidator(func(ctx context.Context, token string) (*middleware.ValidateTokenResult, error) {
-		return &middleware.ValidateTokenResult{UserID: 1, JTI: "test-jti"}, nil
+		return &middleware.ValidateTokenResult{UserID: testUUID, JTI: "test-jti"}, nil
 	})
 
 	h := NewHandler(cmdMock, qryMock, tokenValidator)
@@ -59,7 +61,7 @@ func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *gin.En
 func TestHandler_GetMe(t *testing.T) {
 	qryMock := &mockQueryUseCase{
 		userResult: &query.Result{
-			ID:        1,
+			ID:        testUUID,
 			Email:     "test@example.com",
 			Name:      "Test User",
 			CreatedAt: time.Now(),

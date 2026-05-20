@@ -10,13 +10,14 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+
 type mockUserRepo struct {
 	user *entity.User
 	err  error
 }
 
-func (m *mockUserRepo) Save(_ context.Context, u *entity.User) error {
-	u.SetID(1)
+func (m *mockUserRepo) Save(_ context.Context, _ *entity.User) error {
 	return m.err
 }
 func (m *mockUserRepo) FindByEmail(_ context.Context, _ string) (*entity.User, error) {
@@ -64,7 +65,6 @@ func TestRegisterHandler_InvalidEmail(t *testing.T) {
 
 func TestRegisterHandler_DuplicateEmail(t *testing.T) {
 	existing, _ := entity.NewUser("test@example.com", "hashed", "Existing")
-	existing.SetID(1)
 	h := NewRegisterHandler(&mockUserRepo{user: existing}, &mockHasher{}, &noopTransactor{})
 	err := h.Handle(context.Background(), Register{
 		Email:    "test@example.com",

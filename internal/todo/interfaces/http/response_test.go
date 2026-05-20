@@ -8,10 +8,12 @@ import (
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
 )
 
+const otherUUID = "660e8400-e29b-41d4-a716-446655440000"
+
 func TestToTodoResponse(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	result := &query.Result{
-		ID:          1,
+		ID:          testUUID,
 		Title:       "Buy groceries",
 		Description: "Milk and eggs",
 		Status:      entity.StatusPending,
@@ -22,8 +24,8 @@ func TestToTodoResponse(t *testing.T) {
 
 	resp := toTodoResponse(result)
 
-	if resp.ID != 1 {
-		t.Errorf("ID = %d, want 1", resp.ID)
+	if resp.ID != testUUID {
+		t.Errorf("ID = %q, want %q", resp.ID, testUUID)
 	}
 	if resp.Title != "Buy groceries" {
 		t.Errorf("Title = %q, want %q", resp.Title, "Buy groceries")
@@ -37,8 +39,8 @@ func TestToTodoListResponse(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	result := &query.ListResult{
 		Todos: []query.Result{
-			{ID: 1, Title: "Todo 1", DueDate: now.Add(time.Hour)},
-			{ID: 2, Title: "Todo 2", DueDate: now.Add(2 * time.Hour)},
+			{ID: testUUID, Title: "Todo 1", DueDate: now.Add(time.Hour)},
+			{ID: otherUUID, Title: "Todo 2", DueDate: now.Add(2 * time.Hour)},
 		},
 		Total: 2,
 	}

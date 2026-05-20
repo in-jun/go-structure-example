@@ -13,6 +13,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+
 type noopTransactor struct{}
 
 func (n *noopTransactor) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
@@ -24,10 +26,7 @@ type mockUserRepo struct {
 	err  error
 }
 
-func (m *mockUserRepo) Save(_ context.Context, u *entity.User) error {
-	u.SetID(1)
-	return m.err
-}
+func (m *mockUserRepo) Save(_ context.Context, _ *entity.User) error { return m.err }
 func (m *mockUserRepo) FindByEmail(_ context.Context, _ string) (*entity.User, error) {
 	return m.user, m.err
 }
@@ -37,15 +36,15 @@ type mockTokenRepo struct {
 	err   error
 }
 
-func (m *mockTokenRepo) Save(_ context.Context, _ *entity.RefreshToken) error       { return m.err }
+func (m *mockTokenRepo) Save(_ context.Context, _ *entity.RefreshToken) error { return m.err }
 func (m *mockTokenRepo) FindByToken(_ context.Context, _ string) (*entity.RefreshToken, error) {
 	return m.token, m.err
 }
-func (m *mockTokenRepo) DeleteByUserID(_ context.Context, _ uint) error  { return m.err }
-func (m *mockTokenRepo) DeleteByToken(_ context.Context, _ string) error { return m.err }
-func (m *mockTokenRepo) MarkTokenUsed(_ context.Context, _ string, _ uint) error { return m.err }
-func (m *mockTokenRepo) FindUsedToken(_ context.Context, _ string) (uint, error) {
-	return 0, m.err
+func (m *mockTokenRepo) DeleteByUserID(_ context.Context, _ string) error          { return m.err }
+func (m *mockTokenRepo) DeleteByToken(_ context.Context, _ string) error           { return m.err }
+func (m *mockTokenRepo) MarkTokenUsed(_ context.Context, _ string, _ string) error { return m.err }
+func (m *mockTokenRepo) FindUsedToken(_ context.Context, _ string) (string, error) {
+	return "", m.err
 }
 func (m *mockTokenRepo) BlacklistAccessToken(_ context.Context, _ string, _ time.Duration) error {
 	return m.err
@@ -53,10 +52,10 @@ func (m *mockTokenRepo) BlacklistAccessToken(_ context.Context, _ string, _ time
 func (m *mockTokenRepo) IsAccessTokenBlacklisted(_ context.Context, _ string) (bool, error) {
 	return false, m.err
 }
-func (m *mockTokenRepo) RevokeAllAccessTokens(_ context.Context, _ uint, _ time.Duration) error {
+func (m *mockTokenRepo) RevokeAllAccessTokens(_ context.Context, _ string, _ time.Duration) error {
 	return m.err
 }
-func (m *mockTokenRepo) IsRevokedForUser(_ context.Context, _ uint, _ int64) (bool, error) {
+func (m *mockTokenRepo) IsRevokedForUser(_ context.Context, _ string, _ int64) (bool, error) {
 	return false, m.err
 }
 
@@ -72,13 +71,13 @@ type mockTokenGen struct {
 	err         error
 }
 
-func (m *mockTokenGen) GenerateAccessToken(_ uint) (string, error) {
+func (m *mockTokenGen) GenerateAccessToken(_ string) (string, error) {
 	return m.accessToken, m.err
 }
 func (m *mockTokenGen) ValidateToken(_ string) (*domain.TokenClaims, error) {
 	return m.claims, m.err
 }
-func (m *mockTokenGen) AccessExpirySeconds() int    { return 3600 }
+func (m *mockTokenGen) AccessExpirySeconds() int     { return 3600 }
 func (m *mockTokenGen) RefreshExpiry() time.Duration { return 24 * time.Hour }
 
 type mockHasher struct{}
@@ -112,7 +111,7 @@ func TestAuthService_Register(t *testing.T) {
 }
 
 func TestAuthService_Register_DuplicateEmail(t *testing.T) {
-	existingUser, _ := entity.ReconstructUser(1, "test@example.com", "hashed", "Existing", time.Now(), time.Now())
+	existingUser, _ := entity.ReconstructUser(testUUID, "test@example.com", "hashed", "Existing", time.Now(), time.Now())
 	svc := newTestService(&mockUserRepo{user: existingUser}, &mockTokenRepo{}, &mockTokenGen{})
 
 	err := svc.Register(context.Background(), command.Register{
@@ -126,7 +125,7 @@ func TestAuthService_Register_DuplicateEmail(t *testing.T) {
 }
 
 func TestAuthService_Login(t *testing.T) {
-	user, _ := entity.ReconstructUser(1, "test@example.com", "hashed_password123", "Test", time.Now(), time.Now())
+	user, _ := entity.ReconstructUser(testUUID, "test@example.com", "hashed_password123", "Test", time.Now(), time.Now())
 	tokenGen := &mockTokenGen{accessToken: "access-token"}
 	svc := newTestService(&mockUserRepo{user: user}, &mockTokenRepo{}, tokenGen)
 
@@ -143,7 +142,7 @@ func TestAuthService_Login(t *testing.T) {
 }
 
 func TestAuthService_Login_InvalidPassword(t *testing.T) {
-	user, _ := entity.ReconstructUser(1, "test@example.com", "hashed_correct", "Test", time.Now(), time.Now())
+	user, _ := entity.ReconstructUser(testUUID, "test@example.com", "hashed_correct", "Test", time.Now(), time.Now())
 	svc := newTestService(&mockUserRepo{user: user}, &mockTokenRepo{}, &mockTokenGen{})
 
 	_, err := svc.Login(context.Background(), command.Login{
@@ -171,8 +170,8 @@ type reuseDetectTokenRepo struct {
 	mockTokenRepo
 }
 
-func (m *reuseDetectTokenRepo) FindUsedToken(_ context.Context, _ string) (uint, error) {
-	return 42, nil // non-zero: token was previously used (theft attempt)
+func (m *reuseDetectTokenRepo) FindUsedToken(_ context.Context, _ string) (string, error) {
+	return testUUID, nil // non-empty: token was previously used (theft attempt)
 }
 
 func newServiceWithRepo(tokenRepo domain.TokenRepository) *service {
@@ -198,7 +197,7 @@ func TestAuthService_Refresh_TokenReuseDetected(t *testing.T) {
 
 func TestAuthService_Logout(t *testing.T) {
 	tokenRepo := &mockTokenRepo{}
-	tokenGen := &mockTokenGen{claims: &domain.TokenClaims{UserID: 1, JTI: "jti"}}
+	tokenGen := &mockTokenGen{claims: &domain.TokenClaims{UserID: testUUID, JTI: "jti"}}
 	svc := newTestService(&mockUserRepo{}, tokenRepo, tokenGen)
 
 	err := svc.Logout(context.Background(), command.Logout{
@@ -213,14 +212,14 @@ func TestAuthService_Logout(t *testing.T) {
 func TestAuthService_LogoutAll(t *testing.T) {
 	svc := newTestService(&mockUserRepo{}, &mockTokenRepo{}, &mockTokenGen{})
 
-	err := svc.LogoutAll(context.Background(), command.LogoutAll{UserID: 1})
+	err := svc.LogoutAll(context.Background(), command.LogoutAll{UserID: testUUID})
 	if err != nil {
 		t.Fatalf("LogoutAll() error = %v", err)
 	}
 }
 
 func TestAuthService_ValidateToken(t *testing.T) {
-	claims := &domain.TokenClaims{UserID: 1, JTI: "jti-1", IssuedAt: 12345}
+	claims := &domain.TokenClaims{UserID: testUUID, JTI: "jti-1", IssuedAt: 12345}
 	tokenGen := &mockTokenGen{claims: claims}
 	svc := newTestService(&mockUserRepo{}, &mockTokenRepo{}, tokenGen)
 
@@ -228,8 +227,8 @@ func TestAuthService_ValidateToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateToken() error = %v", err)
 	}
-	if result.UserID != 1 {
-		t.Errorf("expected UserID 1, got %d", result.UserID)
+	if result.UserID != testUUID {
+		t.Errorf("expected UserID %s, got %s", testUUID, result.UserID)
 	}
 }
 

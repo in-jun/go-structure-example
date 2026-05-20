@@ -15,7 +15,7 @@ import (
 	authcmd "github.com/in-jun/go-structure-example/internal/auth/application/command"
 	authqry "github.com/in-jun/go-structure-example/internal/auth/application/query"
 	authjwt "github.com/in-jun/go-structure-example/internal/auth/infrastructure/jwt"
-	authmysql "github.com/in-jun/go-structure-example/internal/auth/infrastructure/mysql"
+	authpg "github.com/in-jun/go-structure-example/internal/auth/infrastructure/pg"
 	authredis "github.com/in-jun/go-structure-example/internal/auth/infrastructure/redis"
 	authhttp "github.com/in-jun/go-structure-example/internal/auth/interfaces/http"
 	"github.com/in-jun/go-structure-example/internal/shared/config"
@@ -28,12 +28,12 @@ import (
 	todoapp "github.com/in-jun/go-structure-example/internal/todo/application"
 	todocmd "github.com/in-jun/go-structure-example/internal/todo/application/command"
 	todoqry "github.com/in-jun/go-structure-example/internal/todo/application/query"
-	todomysql "github.com/in-jun/go-structure-example/internal/todo/infrastructure/mysql"
+	todopg "github.com/in-jun/go-structure-example/internal/todo/infrastructure/pg"
 	todohttp "github.com/in-jun/go-structure-example/internal/todo/interfaces/http"
 	userapp "github.com/in-jun/go-structure-example/internal/user/application"
 	usercmd "github.com/in-jun/go-structure-example/internal/user/application/command"
 	userqry "github.com/in-jun/go-structure-example/internal/user/application/query"
-	usermysql "github.com/in-jun/go-structure-example/internal/user/infrastructure/mysql"
+	userpg "github.com/in-jun/go-structure-example/internal/user/infrastructure/pg"
 	userhttp "github.com/in-jun/go-structure-example/internal/user/interfaces/http"
 )
 
@@ -65,12 +65,12 @@ func main() {
 	}
 	defer redisClient.Close()
 
-	mysqlDB, err := database.NewMySQL()
+	db, err := database.NewPostgres()
 	if err != nil {
-		slog.Error("failed to connect to MySQL", "error", err)
+		slog.Error("failed to connect to PostgreSQL", "error", err)
 		os.Exit(1)
 	}
-	defer mysqlDB.Close()
+	defer db.Close()
 
 	tokenGen, err := authjwt.NewProvider(
 		config.AppConfig.JWTSecret,
@@ -84,13 +84,13 @@ func main() {
 
 	hasher := crypto.NewBcryptPasswordHasher()
 
-	dbGetter := transaction.NewDBGetter(mysqlDB)
-	transactor := transaction.NewTransactor(mysqlDB)
+	dbGetter := transaction.NewDBGetter(db)
+	transactor := transaction.NewTransactor(db)
 
 	tokenRepo := authredis.NewTokenRepository(redisClient)
-	authUserRepo := authmysql.NewUserRepository(dbGetter)
-	userRepo := usermysql.NewUserRepository(dbGetter)
-	todoRepo := todomysql.NewTodoRepository(dbGetter)
+	authUserRepo := authpg.NewUserRepository(dbGetter)
+	userRepo := userpg.NewUserRepository(dbGetter)
+	todoRepo := todopg.NewTodoRepository(dbGetter)
 
 	authService := authapp.NewService(
 		authcmd.NewRegisterHandler(authUserRepo, hasher, transactor),
@@ -137,7 +137,7 @@ func main() {
 	userHandler := userhttp.NewHandler(userCommands, userQueries, validateToken)
 	todoHandler := todohttp.NewHandler(todoCommands, todoQueries, validateToken)
 
-	healthChecker := health.NewChecker(mysqlDB).WithRedis(redisClient).WithBuildInfo(Version, BuildTime, GitCommit)
+	healthChecker := health.NewChecker(db).WithRedis(redisClient).WithBuildInfo(Version, BuildTime, GitCommit)
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.RequestID())

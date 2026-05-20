@@ -10,6 +10,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/auth/domain/entity"
 )
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+
 type mockTokenRepo struct {
 	blacklisted bool
 	revoked     bool
@@ -20,20 +22,22 @@ func (m *mockTokenRepo) Save(_ context.Context, _ *entity.RefreshToken) error { 
 func (m *mockTokenRepo) FindByToken(_ context.Context, _ string) (*entity.RefreshToken, error) {
 	return nil, m.err
 }
-func (m *mockTokenRepo) DeleteByUserID(_ context.Context, _ uint) error            { return m.err }
+func (m *mockTokenRepo) DeleteByUserID(_ context.Context, _ string) error          { return m.err }
 func (m *mockTokenRepo) DeleteByToken(_ context.Context, _ string) error           { return m.err }
-func (m *mockTokenRepo) MarkTokenUsed(_ context.Context, _ string, _ uint) error   { return m.err }
-func (m *mockTokenRepo) FindUsedToken(_ context.Context, _ string) (uint, error)   { return 0, m.err }
+func (m *mockTokenRepo) MarkTokenUsed(_ context.Context, _ string, _ string) error { return m.err }
+func (m *mockTokenRepo) FindUsedToken(_ context.Context, _ string) (string, error) {
+	return "", m.err
+}
 func (m *mockTokenRepo) BlacklistAccessToken(_ context.Context, _ string, _ time.Duration) error {
 	return m.err
 }
 func (m *mockTokenRepo) IsAccessTokenBlacklisted(_ context.Context, _ string) (bool, error) {
 	return m.blacklisted, m.err
 }
-func (m *mockTokenRepo) RevokeAllAccessTokens(_ context.Context, _ uint, _ time.Duration) error {
+func (m *mockTokenRepo) RevokeAllAccessTokens(_ context.Context, _ string, _ time.Duration) error {
 	return m.err
 }
-func (m *mockTokenRepo) IsRevokedForUser(_ context.Context, _ uint, _ int64) (bool, error) {
+func (m *mockTokenRepo) IsRevokedForUser(_ context.Context, _ string, _ int64) (bool, error) {
 	return m.revoked, m.err
 }
 
@@ -45,23 +49,23 @@ type mockTokenGen struct {
 	err    error
 }
 
-func (m *mockTokenGen) GenerateAccessToken(_ uint) (string, error) { return "", nil }
+func (m *mockTokenGen) GenerateAccessToken(_ string) (string, error) { return "", nil }
 func (m *mockTokenGen) ValidateToken(_ string) (*domain.TokenClaims, error) {
 	return m.claims, m.err
 }
-func (m *mockTokenGen) AccessExpirySeconds() int      { return 3600 }
-func (m *mockTokenGen) RefreshExpiry() time.Duration  { return 24 * time.Hour }
+func (m *mockTokenGen) AccessExpirySeconds() int     { return 3600 }
+func (m *mockTokenGen) RefreshExpiry() time.Duration { return 24 * time.Hour }
 
 func TestValidateHandler_ValidToken(t *testing.T) {
-	claims := &domain.TokenClaims{UserID: 1, JTI: "jti-1", IssuedAt: time.Now().Unix()}
+	claims := &domain.TokenClaims{UserID: testUUID, JTI: "jti-1", IssuedAt: time.Now().Unix()}
 	h := NewValidateHandler(&mockTokenRepo{}, &mockTokenGen{claims: claims})
 
 	result, err := h.Handle(context.Background(), Validate{TokenString: "valid-token"})
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
-	if result.UserID != 1 {
-		t.Errorf("expected UserID 1, got %d", result.UserID)
+	if result.UserID != testUUID {
+		t.Errorf("expected UserID %s, got %s", testUUID, result.UserID)
 	}
 	if result.JTI != "jti-1" {
 		t.Errorf("expected JTI 'jti-1', got %q", result.JTI)
@@ -87,7 +91,7 @@ func TestValidateHandler_InvalidToken(t *testing.T) {
 }
 
 func TestValidateHandler_BlacklistedToken(t *testing.T) {
-	claims := &domain.TokenClaims{UserID: 1, JTI: "jti-bl", IssuedAt: time.Now().Unix()}
+	claims := &domain.TokenClaims{UserID: testUUID, JTI: "jti-bl", IssuedAt: time.Now().Unix()}
 	h := NewValidateHandler(&mockTokenRepo{blacklisted: true}, &mockTokenGen{claims: claims})
 
 	_, err := h.Handle(context.Background(), Validate{TokenString: "blacklisted-token"})
@@ -97,7 +101,7 @@ func TestValidateHandler_BlacklistedToken(t *testing.T) {
 }
 
 func TestValidateHandler_RevokedForUser(t *testing.T) {
-	claims := &domain.TokenClaims{UserID: 2, JTI: "jti-rv", IssuedAt: time.Now().Unix()}
+	claims := &domain.TokenClaims{UserID: testUUID, JTI: "jti-rv", IssuedAt: time.Now().Unix()}
 	h := NewValidateHandler(&mockTokenRepo{revoked: true}, &mockTokenGen{claims: claims})
 
 	_, err := h.Handle(context.Background(), Validate{TokenString: "revoked-token"})

@@ -16,6 +16,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
 )
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+
 type mockCommandUseCase struct {
 	loginResp   *command.LoginResult
 	refreshResp *command.RefreshResult
@@ -50,7 +52,7 @@ func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *gin.En
 	r.Use(middleware.ErrorHandler())
 
 	tokenValidator := middleware.TokenValidator(func(ctx context.Context, token string) (*middleware.ValidateTokenResult, error) {
-		return &middleware.ValidateTokenResult{UserID: 1, JTI: "test-jti"}, nil
+		return &middleware.ValidateTokenResult{UserID: testUUID, JTI: "test-jti"}, nil
 	})
 
 	h := NewHandler(cmdMock, qryMock, tokenValidator)

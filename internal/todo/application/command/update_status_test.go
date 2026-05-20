@@ -9,11 +9,12 @@ import (
 )
 
 func TestUpdateStatusHandler_Success(t *testing.T) {
-	h := NewUpdateStatusHandler(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	h := NewUpdateStatusHandler(&mockTodoRepo{todo: todo})
 
 	err := h.Handle(context.Background(), UpdateStatus{
-		UserID: 1,
-		TodoID: 1,
+		UserID: testUUID,
+		TodoID: todo.ID(),
 		Status: entity.StatusCompleted,
 	})
 	if err != nil {
@@ -22,11 +23,12 @@ func TestUpdateStatusHandler_Success(t *testing.T) {
 }
 
 func TestUpdateStatusHandler_InvalidStatus(t *testing.T) {
-	h := NewUpdateStatusHandler(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	h := NewUpdateStatusHandler(&mockTodoRepo{todo: todo})
 
 	err := h.Handle(context.Background(), UpdateStatus{
-		UserID: 1,
-		TodoID: 1,
+		UserID: testUUID,
+		TodoID: todo.ID(),
 		Status: entity.Status("invalid"),
 	})
 	if err == nil {
@@ -38,8 +40,8 @@ func TestUpdateStatusHandler_NotFound(t *testing.T) {
 	h := NewUpdateStatusHandler(&mockTodoRepo{err: errors.NotFound("not found")})
 
 	err := h.Handle(context.Background(), UpdateStatus{
-		UserID: 1,
-		TodoID: 99,
+		UserID: testUUID,
+		TodoID: "nonexistent-id",
 		Status: entity.StatusCompleted,
 	})
 	if err == nil {
@@ -48,11 +50,12 @@ func TestUpdateStatusHandler_NotFound(t *testing.T) {
 }
 
 func TestUpdateStatusHandler_Forbidden(t *testing.T) {
-	h := NewUpdateStatusHandler(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	h := NewUpdateStatusHandler(&mockTodoRepo{todo: todo})
 
 	err := h.Handle(context.Background(), UpdateStatus{
-		UserID: 999,
-		TodoID: 1,
+		UserID: "660e8400-e29b-41d4-a716-446655440000",
+		TodoID: todo.ID(),
 		Status: entity.StatusCompleted,
 	})
 	if err == nil {

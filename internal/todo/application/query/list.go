@@ -7,7 +7,7 @@ import (
 )
 
 type List struct {
-	UserID uint
+	UserID string
 	Page   int
 	Limit  int
 }

@@ -9,11 +9,12 @@ import (
 )
 
 func TestUpdateHandler_Success(t *testing.T) {
-	h := NewUpdateHandler(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	h := NewUpdateHandler(&mockTodoRepo{todo: todo})
 
 	err := h.Handle(context.Background(), Update{
-		UserID:  1,
-		TodoID:  1,
+		UserID:  testUUID,
+		TodoID:  todo.ID(),
 		Title:   "Updated Title",
 		DueDate: time.Now().Add(time.Hour),
 	})
@@ -26,8 +27,8 @@ func TestUpdateHandler_NotFound(t *testing.T) {
 	h := NewUpdateHandler(&mockTodoRepo{err: errors.NotFound("not found")})
 
 	err := h.Handle(context.Background(), Update{
-		UserID:  1,
-		TodoID:  99,
+		UserID:  testUUID,
+		TodoID:  "nonexistent-id",
 		Title:   "Updated",
 		DueDate: time.Now().Add(time.Hour),
 	})
@@ -37,11 +38,12 @@ func TestUpdateHandler_NotFound(t *testing.T) {
 }
 
 func TestUpdateHandler_Forbidden(t *testing.T) {
-	h := NewUpdateHandler(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	h := NewUpdateHandler(&mockTodoRepo{todo: todo})
 
 	err := h.Handle(context.Background(), Update{
-		UserID:  999,
-		TodoID:  1,
+		UserID:  "660e8400-e29b-41d4-a716-446655440000",
+		TodoID:  todo.ID(),
 		Title:   "Updated",
 		DueDate: time.Now().Add(time.Hour),
 	})
@@ -51,11 +53,12 @@ func TestUpdateHandler_Forbidden(t *testing.T) {
 }
 
 func TestUpdateHandler_EmptyTitle(t *testing.T) {
-	h := NewUpdateHandler(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	h := NewUpdateHandler(&mockTodoRepo{todo: todo})
 
 	err := h.Handle(context.Background(), Update{
-		UserID:  1,
-		TodoID:  1,
+		UserID:  testUUID,
+		TodoID:  todo.ID(),
 		Title:   "",
 		DueDate: time.Now().Add(time.Hour),
 	})

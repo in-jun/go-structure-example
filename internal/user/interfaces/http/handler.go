@@ -33,7 +33,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 func (h *Handler) GetMe(c *gin.Context) {
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 
 	result, err := h.queries.GetProfile(c.Request.Context(), query.Get{UserID: userID})
 	if err != nil {
@@ -51,7 +51,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 	if err := h.commands.UpdateProfile(c.Request.Context(), command.UpdateProfile{
 		UserID: userID,
 		Name:   req.Name,
@@ -70,7 +70,7 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 	if err := h.commands.UpdatePassword(c.Request.Context(), command.UpdatePassword{
 		UserID:          userID,
 		CurrentPassword: req.CurrentPassword,
@@ -84,7 +84,7 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 }
 
 func (h *Handler) DeleteMe(c *gin.Context) {
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 	if err := h.commands.Delete(c.Request.Context(), command.Delete{UserID: userID}); err != nil {
 		c.Error(err)
 		return

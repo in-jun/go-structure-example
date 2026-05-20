@@ -8,13 +8,13 @@ import (
 func TestNewRefreshToken(t *testing.T) {
 	tests := []struct {
 		name      string
-		userID    uint
+		userID    string
 		expiresAt time.Time
 		wantError bool
 	}{
-		{"valid", 1, time.Now().Add(time.Hour), false},
-		{"zero userID", 0, time.Now().Add(time.Hour), true},
-		{"zero expiresAt", 1, time.Time{}, true},
+		{"valid", testUUID, time.Now().Add(time.Hour), false},
+		{"empty userID", "", time.Now().Add(time.Hour), true},
+		{"zero expiresAt", testUUID, time.Time{}, true},
 	}
 
 	for _, tt := range tests {
@@ -30,19 +30,19 @@ func TestNewRefreshToken(t *testing.T) {
 				t.Error("expected non-empty token")
 			}
 			if !tt.wantError && token.UserID() != tt.userID {
-				t.Errorf("expected userID %d, got %d", tt.userID, token.UserID())
+				t.Errorf("expected userID %s, got %s", tt.userID, token.UserID())
 			}
 		})
 	}
 }
 
 func TestRefreshToken_IsExpired(t *testing.T) {
-	expired, _ := ReconstructRefreshToken("tok", 1, time.Now().Add(-time.Hour))
+	expired, _ := ReconstructRefreshToken("tok", testUUID, time.Now().Add(-time.Hour))
 	if !expired.IsExpired() {
 		t.Error("expected token to be expired")
 	}
 
-	valid, _ := ReconstructRefreshToken("tok", 1, time.Now().Add(time.Hour))
+	valid, _ := ReconstructRefreshToken("tok", testUUID, time.Now().Add(time.Hour))
 	if valid.IsExpired() {
 		t.Error("expected token to be valid")
 	}
@@ -54,14 +54,14 @@ func TestReconstructRefreshToken(t *testing.T) {
 	tests := []struct {
 		name      string
 		token     string
-		userID    uint
+		userID    string
 		expiresAt time.Time
 		wantError bool
 	}{
-		{"valid", "tok", 1, now, false},
-		{"empty token", "", 1, now, true},
-		{"zero userID", "tok", 0, now, true},
-		{"zero expiresAt", "tok", 1, time.Time{}, true},
+		{"valid", "tok", testUUID, now, false},
+		{"empty token", "", testUUID, now, true},
+		{"empty userID", "tok", "", now, true},
+		{"zero expiresAt", "tok", testUUID, time.Time{}, true},
 	}
 
 	for _, tt := range tests {

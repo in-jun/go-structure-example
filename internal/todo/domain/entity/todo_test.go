@@ -5,17 +5,20 @@ import (
 	"time"
 )
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+const testUUID2 = "660e8400-e29b-41d4-a716-446655440000"
+
 func TestNewTodo(t *testing.T) {
 	tests := []struct {
 		name        string
-		userID      uint
+		userID      string
 		title       string
 		description string
 		wantError   bool
 	}{
-		{"valid", 1, "Buy groceries", "Milk and eggs", false},
-		{"zero userID", 0, "Buy groceries", "", true},
-		{"empty title", 1, "", "description", true},
+		{"valid", testUUID, "Buy groceries", "Milk and eggs", false},
+		{"empty userID", "", "Buy groceries", "", true},
+		{"empty title", testUUID, "", "description", true},
 	}
 
 	for _, tt := range tests {
@@ -30,12 +33,15 @@ func TestNewTodo(t *testing.T) {
 			if !tt.wantError && todo.Status() != StatusPending {
 				t.Errorf("expected status pending, got %q", todo.Status())
 			}
+			if !tt.wantError && todo.ID() == "" {
+				t.Error("expected non-empty UUID for new todo")
+			}
 		})
 	}
 }
 
 func TestTodo_SetStatus(t *testing.T) {
-	todo, _ := NewTodo(1, "Test", "", time.Now().Add(time.Hour))
+	todo, _ := NewTodo(testUUID, "Test", "", time.Now().Add(time.Hour))
 	if todo.Status() != StatusPending {
 		t.Errorf("expected pending, got %q", todo.Status())
 	}
@@ -47,7 +53,7 @@ func TestTodo_SetStatus(t *testing.T) {
 }
 
 func TestTodo_Update(t *testing.T) {
-	todo, _ := NewTodo(1, "Original", "Desc", time.Now().Add(time.Hour))
+	todo, _ := NewTodo(testUUID, "Original", "Desc", time.Now().Add(time.Hour))
 	newDue := time.Now().Add(24 * time.Hour)
 
 	todo.Update("Updated", "New desc", newDue)
@@ -64,15 +70,15 @@ func TestReconstructTodo(t *testing.T) {
 	now := time.Now()
 	tests := []struct {
 		name      string
-		id        uint
-		userID    uint
+		id        string
+		userID    string
 		title     string
 		wantError bool
 	}{
-		{"valid", 1, 1, "Test Todo", false},
-		{"zero id", 0, 1, "Test Todo", true},
-		{"zero userID", 1, 0, "Test Todo", true},
-		{"empty title", 1, 1, "", true},
+		{"valid", testUUID, testUUID2, "Test Todo", false},
+		{"empty id", "", testUUID2, "Test Todo", true},
+		{"empty userID", testUUID, "", "Test Todo", true},
+		{"empty title", testUUID, testUUID2, "", true},
 	}
 
 	for _, tt := range tests {
@@ -85,16 +91,5 @@ func TestReconstructTodo(t *testing.T) {
 				t.Errorf("expected no error, got %v", err)
 			}
 		})
-	}
-}
-
-func TestTodo_SetID(t *testing.T) {
-	todo, _ := NewTodo(1, "Test", "", time.Now().Add(time.Hour))
-	if todo.ID() != 0 {
-		t.Error("expected zero ID for new todo before save")
-	}
-	todo.SetID(42)
-	if todo.ID() != 42 {
-		t.Errorf("expected ID 42, got %d", todo.ID())
 	}
 }

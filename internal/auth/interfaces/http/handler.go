@@ -108,7 +108,7 @@ func (h *Handler) Logout(c *gin.Context) {
 }
 
 func (h *Handler) LogoutAll(c *gin.Context) {
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 
 	if err := h.commands.LogoutAll(c.Request.Context(), command.LogoutAll{
 		UserID: userID,

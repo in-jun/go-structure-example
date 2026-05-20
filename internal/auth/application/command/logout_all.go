@@ -10,7 +10,7 @@ import (
 )
 
 type LogoutAll struct {
-	UserID uint
+	UserID string
 }
 
 type LogoutAllHandler struct {

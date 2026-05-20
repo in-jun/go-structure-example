@@ -8,7 +8,7 @@ import (
 )
 
 type TodoResponse struct {
-	ID          uint          `json:"id"`
+	ID          string        `json:"id"`
 	Title       string        `json:"title"`
 	Description string        `json:"description"`
 	Status      entity.Status `json:"status"`

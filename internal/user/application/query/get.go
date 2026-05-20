@@ -9,11 +9,11 @@ import (
 )
 
 type Get struct {
-	UserID uint
+	UserID string
 }
 
 type Result struct {
-	ID        uint
+	ID        string
 	Email     string
 	Name      string
 	CreatedAt time.Time

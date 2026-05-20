@@ -5,23 +5,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/user/application/command"
 	"github.com/in-jun/go-structure-example/internal/user/application/query"
 	"github.com/in-jun/go-structure-example/internal/user/domain"
 	"github.com/in-jun/go-structure-example/internal/user/domain/entity"
-	"github.com/in-jun/go-structure-example/internal/shared/errors"
 )
+
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
 
 type mockUserRepo struct {
 	user *entity.User
 	err  error
 }
 
-func (m *mockUserRepo) FindByID(_ context.Context, _ uint) (*entity.User, error) {
+func (m *mockUserRepo) FindByID(_ context.Context, _ string) (*entity.User, error) {
 	return m.user, m.err
 }
 func (m *mockUserRepo) Update(_ context.Context, _ *entity.User) error { return m.err }
-func (m *mockUserRepo) Delete(_ context.Context, _ uint) error         { return m.err }
+func (m *mockUserRepo) Delete(_ context.Context, _ string) error       { return m.err }
 
 type mockHasher struct{}
 
@@ -39,14 +41,14 @@ func newTestService(repo *mockUserRepo) *service {
 }
 
 func makeUser() *entity.User {
-	u, _ := entity.ReconstructUser(1, "test@example.com", "hashed_oldpass", "Test", time.Now(), time.Now())
+	u, _ := entity.ReconstructUser(testUUID, "test@example.com", "hashed_oldpass", "Test", time.Now(), time.Now())
 	return u
 }
 
 func TestUserService_GetProfile(t *testing.T) {
 	svc := newTestService(&mockUserRepo{user: makeUser()})
 
-	result, err := svc.GetProfile(context.Background(), query.Get{UserID: 1})
+	result, err := svc.GetProfile(context.Background(), query.Get{UserID: testUUID})
 	if err != nil {
 		t.Fatalf("GetProfile() error = %v", err)
 	}
@@ -58,7 +60,7 @@ func TestUserService_GetProfile(t *testing.T) {
 func TestUserService_GetProfile_NotFound(t *testing.T) {
 	svc := newTestService(&mockUserRepo{err: errors.NotFound("user not found")})
 
-	_, err := svc.GetProfile(context.Background(), query.Get{UserID: 99})
+	_, err := svc.GetProfile(context.Background(), query.Get{UserID: testUUID})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -67,7 +69,7 @@ func TestUserService_GetProfile_NotFound(t *testing.T) {
 func TestUserService_UpdateProfile(t *testing.T) {
 	svc := newTestService(&mockUserRepo{user: makeUser()})
 
-	err := svc.UpdateProfile(context.Background(), command.UpdateProfile{UserID: 1, Name: "New Name"})
+	err := svc.UpdateProfile(context.Background(), command.UpdateProfile{UserID: testUUID, Name: "New Name"})
 	if err != nil {
 		t.Fatalf("UpdateProfile() error = %v", err)
 	}
@@ -77,7 +79,7 @@ func TestUserService_UpdatePassword(t *testing.T) {
 	svc := newTestService(&mockUserRepo{user: makeUser()})
 
 	err := svc.UpdatePassword(context.Background(), command.UpdatePassword{
-		UserID:          1,
+		UserID:          testUUID,
 		CurrentPassword: "oldpass",
 		NewPassword:     "newpassword123",
 	})
@@ -90,7 +92,7 @@ func TestUserService_UpdatePassword_WrongCurrent(t *testing.T) {
 	svc := newTestService(&mockUserRepo{user: makeUser()})
 
 	err := svc.UpdatePassword(context.Background(), command.UpdatePassword{
-		UserID:          1,
+		UserID:          testUUID,
 		CurrentPassword: "wrongpassword",
 		NewPassword:     "newpassword123",
 	})
@@ -102,7 +104,7 @@ func TestUserService_UpdatePassword_WrongCurrent(t *testing.T) {
 func TestUserService_Delete(t *testing.T) {
 	svc := newTestService(&mockUserRepo{user: makeUser()})
 
-	err := svc.Delete(context.Background(), command.Delete{UserID: 1})
+	err := svc.Delete(context.Background(), command.Delete{UserID: testUUID})
 	if err != nil {
 		t.Fatalf("Delete() error = %v", err)
 	}

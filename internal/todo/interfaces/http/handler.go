@@ -43,7 +43,7 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 	result, err := h.commands.Create(c.Request.Context(), command.Create{
 		UserID:      userID,
 		Title:       req.Title,
@@ -69,7 +69,7 @@ func (h *Handler) GetList(c *gin.Context) {
 	} else if limit > 100 {
 		limit = 100
 	}
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 
 	result, err := h.queries.GetList(c.Request.Context(), query.List{
 		UserID: userID,
@@ -85,16 +85,11 @@ func (h *Handler) GetList(c *gin.Context) {
 }
 
 func (h *Handler) Get(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		c.Error(errors.BadRequest("Invalid todo ID"))
-		return
-	}
-
-	userID := c.GetUint("user_id")
+	id := c.Param("id")
+	userID := c.GetString("user_id")
 	result, err := h.queries.Get(c.Request.Context(), query.Get{
 		UserID: userID,
-		TodoID: uint(id),
+		TodoID: id,
 	})
 	if err != nil {
 		c.Error(err)
@@ -105,11 +100,7 @@ func (h *Handler) Get(c *gin.Context) {
 }
 
 func (h *Handler) Update(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		c.Error(errors.BadRequest("Invalid todo ID"))
-		return
-	}
+	id := c.Param("id")
 
 	var req UpdateTodoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -117,10 +108,10 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 	if err := h.commands.Update(c.Request.Context(), command.Update{
 		UserID:      userID,
-		TodoID:      uint(id),
+		TodoID:      id,
 		Title:       req.Title,
 		Description: req.Description,
 		DueDate:     req.DueDate,
@@ -133,11 +124,7 @@ func (h *Handler) Update(c *gin.Context) {
 }
 
 func (h *Handler) UpdateStatus(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		c.Error(errors.BadRequest("Invalid todo ID"))
-		return
-	}
+	id := c.Param("id")
 
 	var req UpdateTodoStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -145,10 +132,10 @@ func (h *Handler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 	if err := h.commands.UpdateStatus(c.Request.Context(), command.UpdateStatus{
 		UserID: userID,
-		TodoID: uint(id),
+		TodoID: id,
 		Status: entity.Status(req.Status),
 	}); err != nil {
 		c.Error(err)
@@ -159,16 +146,12 @@ func (h *Handler) UpdateStatus(c *gin.Context) {
 }
 
 func (h *Handler) Delete(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		c.Error(errors.BadRequest("Invalid todo ID"))
-		return
-	}
+	id := c.Param("id")
 
-	userID := c.GetUint("user_id")
+	userID := c.GetString("user_id")
 	if err := h.commands.Delete(c.Request.Context(), command.Delete{
 		UserID: userID,
-		TodoID: uint(id),
+		TodoID: id,
 	}); err != nil {
 		c.Error(err)
 		return

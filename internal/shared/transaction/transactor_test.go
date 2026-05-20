@@ -26,7 +26,7 @@ func TestWithinTransaction_NestedReusesExistingTx(t *testing.T) {
 	txCtx := context.WithValue(context.Background(), txCtxKey{}, &txHolder{tx: nil})
 
 	called := 0
-	transactor := &mysqlTransactor{db: nil}
+	transactor := &pgTransactor{db: nil}
 
 	err := transactor.WithinTransaction(txCtx, func(ctx context.Context) error {
 		called++

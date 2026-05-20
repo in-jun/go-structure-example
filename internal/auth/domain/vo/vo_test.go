@@ -2,6 +2,8 @@ package vo
 
 import "testing"
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+
 func TestNewRegisterVO(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -104,11 +106,12 @@ func TestNewTokenStringVO(t *testing.T) {
 func TestNewUserIDVO(t *testing.T) {
 	tests := []struct {
 		name      string
-		id        uint
+		id        string
 		wantError bool
 	}{
-		{"valid", 42, false},
-		{"zero", 0, true},
+		{"valid uuid", testUUID, false},
+		{"empty", "", true},
+		{"not a uuid", "not-a-uuid", true},
 	}
 
 	for _, tt := range tests {

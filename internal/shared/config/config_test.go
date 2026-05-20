@@ -14,8 +14,8 @@ func TestLoad_Defaults(t *testing.T) {
 	if AppConfig.AppPort != "8080" {
 		t.Errorf("expected default AppPort '8080', got %q", AppConfig.AppPort)
 	}
-	if AppConfig.MySQLPort != "3306" {
-		t.Errorf("expected default MySQLPort '3306', got %q", AppConfig.MySQLPort)
+	if AppConfig.PGPort != "5432" {
+		t.Errorf("expected default PGPort '5432', got %q", AppConfig.PGPort)
 	}
 	if AppConfig.ShutdownTimeout != 10*time.Second {
 		t.Errorf("expected default ShutdownTimeout 10s, got %v", AppConfig.ShutdownTimeout)
@@ -26,8 +26,8 @@ func TestLoad_Defaults(t *testing.T) {
 	if AppConfig.RateLimitBurst != 100 {
 		t.Errorf("expected default RateLimitBurst 100, got %d", AppConfig.RateLimitBurst)
 	}
-	if AppConfig.MySQLMaxOpenConns != 25 {
-		t.Errorf("expected default MySQLMaxOpenConns 25, got %d", AppConfig.MySQLMaxOpenConns)
+	if AppConfig.PGMaxOpenConns != 25 {
+		t.Errorf("expected default PGMaxOpenConns 25, got %d", AppConfig.PGMaxOpenConns)
 	}
 	if AppConfig.CORSAllowOrigins != "*" {
 		t.Errorf("expected default CORSAllowOrigins '*', got %q", AppConfig.CORSAllowOrigins)
@@ -47,7 +47,7 @@ func TestLoad_CustomEnv(t *testing.T) {
 	os.Clearenv()
 	t.Setenv("JWT_SECRET", "custom-secret")
 	t.Setenv("APP_PORT", "9090")
-	t.Setenv("MYSQL_HOST", "myhost")
+	t.Setenv("PG_HOST", "myhost")
 	t.Setenv("SHUTDOWN_TIMEOUT", "30s")
 	t.Setenv("RATE_LIMIT_BURST", "200")
 	t.Setenv("CORS_ALLOW_ORIGINS", "https://example.com")
@@ -57,8 +57,8 @@ func TestLoad_CustomEnv(t *testing.T) {
 	if AppConfig.AppPort != "9090" {
 		t.Errorf("expected AppPort '9090', got %q", AppConfig.AppPort)
 	}
-	if AppConfig.MySQLHost != "myhost" {
-		t.Errorf("expected MySQLHost 'myhost', got %q", AppConfig.MySQLHost)
+	if AppConfig.PGHost != "myhost" {
+		t.Errorf("expected PGHost 'myhost', got %q", AppConfig.PGHost)
 	}
 	if AppConfig.ShutdownTimeout != 30*time.Second {
 		t.Errorf("expected ShutdownTimeout 30s, got %v", AppConfig.ShutdownTimeout)

@@ -1,4 +1,4 @@
-package mysql
+package pg
 
 import (
 	"context"
@@ -22,10 +22,9 @@ func NewUserRepository(db func(ctx context.Context) transaction.DBTX) domain.Use
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) FindByID(ctx context.Context, id uint) (*entity.User, error) {
-	query := "SELECT id, email, password, name, created_at, updated_at FROM users WHERE id = ?"
-	var uid uint
-	var email, password, name string
+func (r *userRepository) FindByID(ctx context.Context, id string) (*entity.User, error) {
+	query := "SELECT id, email, password, name, created_at, updated_at FROM users WHERE id = $1"
+	var uid, email, password, name string
 	var createdAt, updatedAt time.Time
 	err := r.db(ctx).QueryRowContext(ctx, query, id).Scan(&uid, &email, &password, &name, &createdAt, &updatedAt)
 	if stderrors.Is(err, sql.ErrNoRows) {
@@ -42,8 +41,8 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*entity.User, e
 }
 
 func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
-	query := "UPDATE users SET name = ?, password = ? WHERE id = ?"
-	result, err := r.db(ctx).ExecContext(ctx, query, user.Name(), user.HashedPassword(), user.ID())
+	query := "UPDATE users SET name = $1, password = $2, updated_at = $3 WHERE id = $4"
+	result, err := r.db(ctx).ExecContext(ctx, query, user.Name(), user.HashedPassword(), user.UpdatedAt(), user.ID())
 	if err != nil {
 		return errors.Internal("Failed to update user")
 	}
@@ -57,8 +56,8 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 	return nil
 }
 
-func (r *userRepository) Delete(ctx context.Context, id uint) error {
-	result, err := r.db(ctx).ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
+func (r *userRepository) Delete(ctx context.Context, id string) error {
+	result, err := r.db(ctx).ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
 	if err != nil {
 		return errors.Internal("Failed to delete user")
 	}

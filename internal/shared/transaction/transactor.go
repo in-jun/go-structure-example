@@ -38,15 +38,15 @@ func NewDBGetter(db *sql.DB) func(ctx context.Context) DBTX {
 	}
 }
 
-type mysqlTransactor struct {
+type pgTransactor struct {
 	db *sql.DB
 }
 
 func NewTransactor(db *sql.DB) Transactor {
-	return &mysqlTransactor{db: db}
+	return &pgTransactor{db: db}
 }
 
-func (t *mysqlTransactor) WithinTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+func (t *pgTransactor) WithinTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
 	if txFromContext(ctx) != nil {
 		return fn(ctx)
 	}

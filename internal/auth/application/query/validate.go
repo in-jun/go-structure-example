@@ -13,7 +13,7 @@ type Validate struct {
 }
 
 type Result struct {
-	UserID   uint
+	UserID   string
 	JTI      string
 	IssuedAt int64
 }

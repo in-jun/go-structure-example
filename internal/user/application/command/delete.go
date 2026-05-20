@@ -7,7 +7,7 @@ import (
 )
 
 type Delete struct {
-	UserID uint
+	UserID string
 }
 
 type DeleteHandler struct {

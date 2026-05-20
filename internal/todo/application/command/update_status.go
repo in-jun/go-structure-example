@@ -10,8 +10,8 @@ import (
 )
 
 type UpdateStatus struct {
-	UserID uint
-	TodoID uint
+	UserID string
+	TodoID string
 	Status entity.Status
 }
 

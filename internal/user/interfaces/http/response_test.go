@@ -10,7 +10,7 @@ import (
 func TestToUserResponse(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	result := &query.Result{
-		ID:        1,
+		ID:        testUUID,
 		Email:     "test@example.com",
 		Name:      "Test User",
 		CreatedAt: now,
@@ -18,8 +18,8 @@ func TestToUserResponse(t *testing.T) {
 
 	resp := toUserResponse(result)
 
-	if resp.ID != 1 {
-		t.Errorf("ID = %d, want 1", resp.ID)
+	if resp.ID != testUUID {
+		t.Errorf("ID = %q, want %q", resp.ID, testUUID)
 	}
 	if resp.Email != "test@example.com" {
 		t.Errorf("Email = %q, want %q", resp.Email, "test@example.com")

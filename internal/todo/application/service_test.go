@@ -12,6 +12,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/todo/domain/entity"
 )
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+
 type mockTodoRepo struct {
 	todo  *entity.Todo
 	todos []*entity.Todo
@@ -19,18 +21,15 @@ type mockTodoRepo struct {
 	err   error
 }
 
-func (m *mockTodoRepo) Save(_ context.Context, t *entity.Todo) error {
-	t.SetID(1)
-	return m.err
-}
-func (m *mockTodoRepo) FindByID(_ context.Context, _ uint) (*entity.Todo, error) {
+func (m *mockTodoRepo) Save(_ context.Context, _ *entity.Todo) error { return m.err }
+func (m *mockTodoRepo) FindByID(_ context.Context, _ string) (*entity.Todo, error) {
 	return m.todo, m.err
 }
-func (m *mockTodoRepo) FindByUserID(_ context.Context, _ uint, _, _ int) ([]*entity.Todo, int64, error) {
+func (m *mockTodoRepo) FindByUserID(_ context.Context, _ string, _, _ int) ([]*entity.Todo, int64, error) {
 	return m.todos, m.total, m.err
 }
 func (m *mockTodoRepo) Update(_ context.Context, _ *entity.Todo) error { return m.err }
-func (m *mockTodoRepo) Delete(_ context.Context, _ uint) error         { return m.err }
+func (m *mockTodoRepo) Delete(_ context.Context, _ string) error       { return m.err }
 
 func newTestService(repo *mockTodoRepo) *service {
 	return NewService(
@@ -44,8 +43,7 @@ func newTestService(repo *mockTodoRepo) *service {
 }
 
 func makeTodo() *entity.Todo {
-	t, _ := entity.NewTodo(1, "Test Todo", "description", time.Now().Add(time.Hour))
-	t.SetID(1)
+	t, _ := entity.NewTodo(testUUID, "Test Todo", "description", time.Now().Add(time.Hour))
 	return t
 }
 
@@ -53,22 +51,23 @@ func TestTodoService_Create(t *testing.T) {
 	svc := newTestService(&mockTodoRepo{})
 
 	result, err := svc.Create(context.Background(), command.Create{
-		UserID:  1,
+		UserID:  testUUID,
 		Title:   "Buy groceries",
 		DueDate: time.Now().Add(time.Hour),
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	if result.ID == 0 {
-		t.Error("expected non-zero ID")
+	if result.ID == "" {
+		t.Error("expected non-empty ID")
 	}
 }
 
 func TestTodoService_Get(t *testing.T) {
-	svc := newTestService(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	svc := newTestService(&mockTodoRepo{todo: todo})
 
-	result, err := svc.Get(context.Background(), query.Get{UserID: 1, TodoID: 1})
+	result, err := svc.Get(context.Background(), query.Get{UserID: testUUID, TodoID: todo.ID()})
 	if err != nil {
 		t.Fatalf("Get() error = %v", err)
 	}
@@ -80,7 +79,7 @@ func TestTodoService_Get(t *testing.T) {
 func TestTodoService_Get_NotFound(t *testing.T) {
 	svc := newTestService(&mockTodoRepo{err: errors.NotFound("not found")})
 
-	_, err := svc.Get(context.Background(), query.Get{UserID: 1, TodoID: 99})
+	_, err := svc.Get(context.Background(), query.Get{UserID: testUUID, TodoID: "some-id"})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -90,7 +89,7 @@ func TestTodoService_Get_Forbidden(t *testing.T) {
 	todo := makeTodo()
 	svc := newTestService(&mockTodoRepo{todo: todo})
 
-	_, err := svc.Get(context.Background(), query.Get{UserID: 999, TodoID: 1})
+	_, err := svc.Get(context.Background(), query.Get{UserID: "660e8400-e29b-41d4-a716-446655440000", TodoID: todo.ID()})
 	if err == nil {
 		t.Fatal("expected forbidden error, got nil")
 	}
@@ -99,7 +98,7 @@ func TestTodoService_Get_Forbidden(t *testing.T) {
 func TestTodoService_GetList(t *testing.T) {
 	svc := newTestService(&mockTodoRepo{todos: []*entity.Todo{makeTodo()}, total: 1})
 
-	result, err := svc.GetList(context.Background(), query.List{UserID: 1, Page: 1, Limit: 10})
+	result, err := svc.GetList(context.Background(), query.List{UserID: testUUID, Page: 1, Limit: 10})
 	if err != nil {
 		t.Fatalf("GetList() error = %v", err)
 	}
@@ -109,11 +108,12 @@ func TestTodoService_GetList(t *testing.T) {
 }
 
 func TestTodoService_Update(t *testing.T) {
-	svc := newTestService(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	svc := newTestService(&mockTodoRepo{todo: todo})
 
 	err := svc.Update(context.Background(), command.Update{
-		UserID:  1,
-		TodoID:  1,
+		UserID:  testUUID,
+		TodoID:  todo.ID(),
 		Title:   "Updated",
 		DueDate: time.Now().Add(time.Hour),
 	})
@@ -123,11 +123,12 @@ func TestTodoService_Update(t *testing.T) {
 }
 
 func TestTodoService_UpdateStatus(t *testing.T) {
-	svc := newTestService(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	svc := newTestService(&mockTodoRepo{todo: todo})
 
 	err := svc.UpdateStatus(context.Background(), command.UpdateStatus{
-		UserID: 1,
-		TodoID: 1,
+		UserID: testUUID,
+		TodoID: todo.ID(),
 		Status: entity.StatusCompleted,
 	})
 	if err != nil {
@@ -136,9 +137,10 @@ func TestTodoService_UpdateStatus(t *testing.T) {
 }
 
 func TestTodoService_Delete(t *testing.T) {
-	svc := newTestService(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	svc := newTestService(&mockTodoRepo{todo: todo})
 
-	err := svc.Delete(context.Background(), command.Delete{UserID: 1, TodoID: 1})
+	err := svc.Delete(context.Background(), command.Delete{UserID: testUUID, TodoID: todo.ID()})
 	if err != nil {
 		t.Fatalf("Delete() error = %v", err)
 	}

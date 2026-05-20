@@ -11,8 +11,8 @@ import (
 )
 
 type mockTokenRepo struct {
-	token *entity.RefreshToken
-	userID uint
+	token  *entity.RefreshToken
+	userID string
 	err    error
 }
 
@@ -20,10 +20,10 @@ func (m *mockTokenRepo) Save(_ context.Context, _ *entity.RefreshToken) error { 
 func (m *mockTokenRepo) FindByToken(_ context.Context, _ string) (*entity.RefreshToken, error) {
 	return m.token, m.err
 }
-func (m *mockTokenRepo) DeleteByUserID(_ context.Context, _ uint) error       { return m.err }
-func (m *mockTokenRepo) DeleteByToken(_ context.Context, _ string) error      { return m.err }
-func (m *mockTokenRepo) MarkTokenUsed(_ context.Context, _ string, _ uint) error { return m.err }
-func (m *mockTokenRepo) FindUsedToken(_ context.Context, _ string) (uint, error) {
+func (m *mockTokenRepo) DeleteByUserID(_ context.Context, _ string) error          { return m.err }
+func (m *mockTokenRepo) DeleteByToken(_ context.Context, _ string) error           { return m.err }
+func (m *mockTokenRepo) MarkTokenUsed(_ context.Context, _ string, _ string) error { return m.err }
+func (m *mockTokenRepo) FindUsedToken(_ context.Context, _ string) (string, error) {
 	return m.userID, m.err
 }
 func (m *mockTokenRepo) BlacklistAccessToken(_ context.Context, _ string, _ time.Duration) error {
@@ -32,28 +32,27 @@ func (m *mockTokenRepo) BlacklistAccessToken(_ context.Context, _ string, _ time
 func (m *mockTokenRepo) IsAccessTokenBlacklisted(_ context.Context, _ string) (bool, error) {
 	return false, m.err
 }
-func (m *mockTokenRepo) RevokeAllAccessTokens(_ context.Context, _ uint, _ time.Duration) error {
+func (m *mockTokenRepo) RevokeAllAccessTokens(_ context.Context, _ string, _ time.Duration) error {
 	return m.err
 }
-func (m *mockTokenRepo) IsRevokedForUser(_ context.Context, _ uint, _ int64) (bool, error) {
+func (m *mockTokenRepo) IsRevokedForUser(_ context.Context, _ string, _ int64) (bool, error) {
 	return false, m.err
 }
 
 type mockTokenGen struct{}
 
-func (m *mockTokenGen) GenerateAccessToken(_ uint) (string, error) { return "access-token", nil }
+func (m *mockTokenGen) GenerateAccessToken(_ string) (string, error) { return "access-token", nil }
 func (m *mockTokenGen) ValidateToken(_ string) (*domain.TokenClaims, error) {
-	return &domain.TokenClaims{UserID: 1}, nil
+	return &domain.TokenClaims{UserID: testUUID}, nil
 }
-func (m *mockTokenGen) AccessExpirySeconds() int           { return 900 }
-func (m *mockTokenGen) RefreshExpiry() time.Duration       { return 7 * 24 * time.Hour }
+func (m *mockTokenGen) AccessExpirySeconds() int     { return 900 }
+func (m *mockTokenGen) RefreshExpiry() time.Duration { return 7 * 24 * time.Hour }
 
 var _ domain.TokenRepository = (*mockTokenRepo)(nil)
 var _ domain.TokenGenerator = (*mockTokenGen)(nil)
 
 func makeAuthUser() *entity.User {
 	u, _ := entity.NewUser("test@example.com", "hashed_password123", "Test User")
-	u.SetID(1)
 	return u
 }
 

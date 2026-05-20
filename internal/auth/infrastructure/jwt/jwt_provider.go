@@ -13,7 +13,7 @@ import (
 var _ domain.TokenGenerator = (*provider)(nil)
 
 type claims struct {
-	UserID uint `json:"user_id"`
+	UserID string `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
@@ -39,7 +39,7 @@ func NewProvider(secret, accessExpiry, refreshExpiry string) (domain.TokenGenera
 	}, nil
 }
 
-func (p *provider) GenerateAccessToken(userID uint) (string, error) {
+func (p *provider) GenerateAccessToken(userID string) (string, error) {
 	jti, err := generateRandomString(16)
 	if err != nil {
 		return "", err

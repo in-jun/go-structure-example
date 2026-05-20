@@ -10,12 +10,12 @@ import (
 )
 
 func makeValidRefreshToken() *entity.RefreshToken {
-	rt, _ := entity.NewRefreshToken(1, time.Now().Add(time.Hour))
+	rt, _ := entity.NewRefreshToken(testUUID, time.Now().Add(time.Hour))
 	return rt
 }
 
 func makeExpiredRefreshToken() *entity.RefreshToken {
-	rt, _ := entity.ReconstructRefreshToken("expired-token", 1, time.Now().Add(-time.Hour))
+	rt, _ := entity.ReconstructRefreshToken("expired-token", testUUID, time.Now().Add(-time.Hour))
 	return rt
 }
 
@@ -72,7 +72,7 @@ func TestRefreshHandler_ExpiredToken(t *testing.T) {
 }
 
 func TestRefreshHandler_TokenReuseDetected(t *testing.T) {
-	h := NewRefreshHandler(&mockTokenRepo{token: nil, userID: 1}, &mockTokenGen{})
+	h := NewRefreshHandler(&mockTokenRepo{token: nil, userID: testUUID}, &mockTokenGen{})
 
 	_, err := h.Handle(context.Background(), Refresh{RefreshToken: "used-token"})
 	if err == nil {

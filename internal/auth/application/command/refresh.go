@@ -44,7 +44,7 @@ func (h *RefreshHandler) Handle(ctx context.Context, cmd Refresh) (*RefreshResul
 		if err != nil {
 			return nil, err
 		}
-		if userID != 0 {
+		if userID != "" {
 			_ = h.tokenRepo.DeleteByUserID(ctx, userID)
 			return nil, errors.Unauthorized("Token reuse detected, all sessions revoked")
 		}

@@ -9,7 +9,7 @@ import (
 )
 
 type UpdateProfile struct {
-	UserID uint
+	UserID string
 	Name   string
 }
 

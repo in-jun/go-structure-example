@@ -8,7 +8,7 @@ import (
 var errInvalidUser = errors.New("id, email, and name are required")
 
 type User struct {
-	id        uint
+	id        string
 	email     string
 	password  string
 	name      string
@@ -16,8 +16,8 @@ type User struct {
 	updatedAt time.Time
 }
 
-func ReconstructUser(id uint, email, password, name string, createdAt, updatedAt time.Time) (*User, error) {
-	if id == 0 || email == "" || name == "" {
+func ReconstructUser(id, email, password, name string, createdAt, updatedAt time.Time) (*User, error) {
+	if id == "" || email == "" || name == "" {
 		return nil, errInvalidUser
 	}
 	return &User{
@@ -30,12 +30,12 @@ func ReconstructUser(id uint, email, password, name string, createdAt, updatedAt
 	}, nil
 }
 
-func (u *User) ID() uint             { return u.id }
-func (u *User) Email() string         { return u.email }
+func (u *User) ID() string             { return u.id }
+func (u *User) Email() string          { return u.email }
 func (u *User) HashedPassword() string { return u.password }
-func (u *User) Name() string          { return u.name }
-func (u *User) CreatedAt() time.Time  { return u.createdAt }
-func (u *User) UpdatedAt() time.Time  { return u.updatedAt }
+func (u *User) Name() string           { return u.name }
+func (u *User) CreatedAt() time.Time   { return u.createdAt }
+func (u *User) UpdatedAt() time.Time   { return u.updatedAt }
 
 func (u *User) SetName(name string) {
 	u.name = name

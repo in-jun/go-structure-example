@@ -9,7 +9,7 @@ import (
 )
 
 type UpdatePassword struct {
-	UserID          uint
+	UserID          string
 	CurrentPassword string
 	NewPassword     string
 }

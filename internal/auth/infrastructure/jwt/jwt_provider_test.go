@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const testUUID = "550e8400-e29b-41d4-a716-446655440000"
+
 func newTestProvider(t *testing.T) *provider {
 	t.Helper()
 	p, err := NewProvider("test-secret-key", "15m", "168h")
@@ -16,9 +18,8 @@ func newTestProvider(t *testing.T) *provider {
 
 func TestProvider_GenerateAndValidate(t *testing.T) {
 	p := newTestProvider(t)
-	const userID = uint(42)
 
-	token, err := p.GenerateAccessToken(userID)
+	token, err := p.GenerateAccessToken(testUUID)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken() error = %v", err)
 	}
@@ -30,8 +31,8 @@ func TestProvider_GenerateAndValidate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateToken() error = %v", err)
 	}
-	if claims.UserID != userID {
-		t.Errorf("expected userID %d, got %d", userID, claims.UserID)
+	if claims.UserID != testUUID {
+		t.Errorf("expected userID %s, got %s", testUUID, claims.UserID)
 	}
 	if claims.JTI == "" {
 		t.Error("expected non-empty JTI")
@@ -45,7 +46,7 @@ func TestProvider_ValidateToken_InvalidSignature(t *testing.T) {
 	p := newTestProvider(t)
 
 	p2, _ := NewProvider("different-secret", "15m", "168h")
-	token, _ := p2.(*provider).GenerateAccessToken(1)
+	token, _ := p2.(*provider).GenerateAccessToken(testUUID)
 
 	_, err := p.ValidateToken(token)
 	if err == nil {
@@ -65,8 +66,8 @@ func TestProvider_ValidateToken_Malformed(t *testing.T) {
 func TestProvider_UniqueJTI(t *testing.T) {
 	p := newTestProvider(t)
 
-	c1, _ := p.ValidateToken(func() string { t, _ := p.GenerateAccessToken(1); return t }())
-	c2, _ := p.ValidateToken(func() string { t, _ := p.GenerateAccessToken(1); return t }())
+	c1, _ := p.ValidateToken(func() string { t, _ := p.GenerateAccessToken(testUUID); return t }())
+	c2, _ := p.ValidateToken(func() string { t, _ := p.GenerateAccessToken(testUUID); return t }())
 
 	if c1.JTI == c2.JTI {
 		t.Error("expected unique JTI per token")

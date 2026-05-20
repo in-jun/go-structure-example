@@ -1,4 +1,4 @@
-package mysql
+package pg
 
 import (
 	"context"
@@ -23,23 +23,18 @@ func NewUserRepository(db func(ctx context.Context) transaction.DBTX) domain.Use
 }
 
 func (r *userRepository) Save(ctx context.Context, user *entity.User) error {
-	query := "INSERT INTO users (email, password, name) VALUES (?, ?, ?)"
-	result, err := r.db(ctx).ExecContext(ctx, query, user.Email(), user.HashedPassword(), user.Name())
+	query := "INSERT INTO users (id, email, password, name, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)"
+	_, err := r.db(ctx).ExecContext(ctx, query,
+		user.ID(), user.Email(), user.HashedPassword(), user.Name(), user.CreatedAt(), user.UpdatedAt())
 	if err != nil {
 		return errors.Internal("Failed to create user")
 	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return errors.Internal("Failed to get user ID")
-	}
-	user.SetID(uint(id))
 	return nil
 }
 
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
-	query := "SELECT id, email, password, name, created_at, updated_at FROM users WHERE email = ?"
-	var id uint
-	var e, password, name string
+	query := "SELECT id, email, password, name, created_at, updated_at FROM users WHERE email = $1"
+	var id, e, password, name string
 	var createdAt, updatedAt time.Time
 	err := r.db(ctx).QueryRowContext(ctx, query, email).Scan(&id, &e, &password, &name, &createdAt, &updatedAt)
 	if stderrors.Is(err, sql.ErrNoRows) {

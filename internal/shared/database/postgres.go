@@ -7,32 +7,33 @@ import (
 	"log/slog"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/mysql"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/in-jun/go-structure-example/internal/shared/config"
 )
 
-func NewMySQL() (*sql.DB, error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&multiStatements=true",
-		config.AppConfig.MySQLUsername,
-		config.AppConfig.MySQLPassword,
-		config.AppConfig.MySQLHost,
-		config.AppConfig.MySQLPort,
-		config.AppConfig.MySQLDatabase,
+func NewPostgres() (*sql.DB, error) {
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		config.AppConfig.PGUsername,
+		config.AppConfig.PGPassword,
+		config.AppConfig.PGHost,
+		config.AppConfig.PGPort,
+		config.AppConfig.PGDatabase,
+		config.AppConfig.PGSSLMode,
 	)
 
-	db, err := sql.Open("mysql", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	if config.AppConfig.MySQLMaxOpenConns > 0 {
-		db.SetMaxOpenConns(config.AppConfig.MySQLMaxOpenConns)
+	if config.AppConfig.PGMaxOpenConns > 0 {
+		db.SetMaxOpenConns(config.AppConfig.PGMaxOpenConns)
 	}
-	if config.AppConfig.MySQLMaxIdleConns > 0 {
-		db.SetMaxIdleConns(config.AppConfig.MySQLMaxIdleConns)
+	if config.AppConfig.PGMaxIdleConns > 0 {
+		db.SetMaxIdleConns(config.AppConfig.PGMaxIdleConns)
 	}
 	db.SetConnMaxLifetime(5 * time.Minute)
 	db.SetConnMaxIdleTime(3 * time.Minute)
@@ -49,24 +50,19 @@ func NewMySQL() (*sql.DB, error) {
 }
 
 func runMigrations(db *sql.DB) error {
-	// Advisory lock prevents multiple instances from migrating simultaneously.
-	var acquired int
-	if err := db.QueryRow("SELECT GET_LOCK('migration_lock', 30)").Scan(&acquired); err != nil {
+	if _, err := db.Exec("SELECT pg_advisory_lock(1)"); err != nil {
 		return fmt.Errorf("failed to acquire migration lock: %w", err)
 	}
-	if acquired != 1 {
-		return fmt.Errorf("could not acquire migration lock (timeout)")
-	}
-	defer db.Exec("SELECT RELEASE_LOCK('migration_lock')")
+	defer db.Exec("SELECT pg_advisory_unlock(1)")
 
-	driver, err := mysql.WithInstance(db, &mysql.Config{})
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to create driver: %w", err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://"+config.AppConfig.MigrationPath,
-		"mysql",
+		"postgres",
 		driver,
 	)
 	if err != nil {

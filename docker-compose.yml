@@ -9,13 +9,13 @@ services:
       JWT_SECRET: "change-me-in-production"
       JWT_ACCESS_EXPIRY: "15m"
       JWT_REFRESH_EXPIRY: "168h"
-      MYSQL_HOST: mysql
-      MYSQL_PORT: "3306"
-      MYSQL_DATABASE: app_db
-      MYSQL_USERNAME: app
-      MYSQL_PASSWORD: app
-      MYSQL_MAX_OPEN_CONNS: "25"
-      MYSQL_MAX_IDLE_CONNS: "10"
+      PG_HOST: postgres
+      PG_PORT: "5432"
+      PG_DATABASE: app_db
+      PG_USERNAME: app
+      PG_PASSWORD: app
+      PG_MAX_OPEN_CONNS: "25"
+      PG_MAX_IDLE_CONNS: "10"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       CORS_ALLOW_ORIGINS: "*"
@@ -29,23 +29,22 @@ services:
       retries: 3
       start_period: 15s
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
-  mysql:
-    image: mysql:8.0
+  postgres:
+    image: postgres:16
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: app_db
-      MYSQL_USER: app
-      MYSQL_PASSWORD: app
+      POSTGRES_DB: app_db
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
     volumes:
-      - mysql-data:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "pg_isready -U app -d app_db"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -60,4 +59,4 @@ services:
       retries: 5
 
 volumes:
-  mysql-data:
+  postgres-data:

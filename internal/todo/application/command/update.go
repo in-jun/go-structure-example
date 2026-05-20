@@ -10,8 +10,8 @@ import (
 )
 
 type Update struct {
-	UserID      uint
-	TodoID      uint
+	UserID      string
+	TodoID      string
 	Title       string
 	Description string
 	DueDate     time.Time

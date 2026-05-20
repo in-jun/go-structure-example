@@ -9,7 +9,7 @@ import (
 )
 
 type ValidateTokenResult struct {
-	UserID   uint
+	UserID   string
 	JTI      string
 	IssuedAt int64
 }

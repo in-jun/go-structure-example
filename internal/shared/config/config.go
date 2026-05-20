@@ -12,13 +12,14 @@ type Config struct {
 	JWTSecret        string
 	JWTAccessExpiry  string
 	JWTRefreshExpiry string
-	MySQLHost        string
-	MySQLPort        string
-	MySQLDatabase    string
-	MySQLUsername    string
-	MySQLPassword    string
-	MySQLMaxOpenConns int
-	MySQLMaxIdleConns int
+	PGHost           string
+	PGPort           string
+	PGDatabase       string
+	PGUsername       string
+	PGPassword       string
+	PGSSLMode        string
+	PGMaxOpenConns   int
+	PGMaxIdleConns   int
 	RedisHost        string
 	RedisPort        string
 	RedisPassword    string
@@ -37,17 +38,18 @@ func Load() {
 		JWTSecret:         requireEnv("JWT_SECRET"),
 		JWTAccessExpiry:   getEnv("JWT_ACCESS_EXPIRY", "15m"),
 		JWTRefreshExpiry:  getEnv("JWT_REFRESH_EXPIRY", "168h"),
-		MySQLHost:         getEnv("MYSQL_HOST", "localhost"),
-		MySQLPort:         getEnv("MYSQL_PORT", "3306"),
-		MySQLDatabase:     getEnv("MYSQL_DATABASE", "app_db"),
-		MySQLUsername:     getEnv("MYSQL_USERNAME", "root"),
-		MySQLPassword:     getEnv("MYSQL_PASSWORD", ""),
-		MySQLMaxOpenConns: parseInt(getEnv("MYSQL_MAX_OPEN_CONNS", "25")),
-		MySQLMaxIdleConns: parseInt(getEnv("MYSQL_MAX_IDLE_CONNS", "10")),
+		PGHost:           getEnv("PG_HOST", "localhost"),
+		PGPort:           getEnv("PG_PORT", "5432"),
+		PGDatabase:       getEnv("PG_DATABASE", "app_db"),
+		PGUsername:       getEnv("PG_USERNAME", "postgres"),
+		PGPassword:       getEnv("PG_PASSWORD", ""),
+		PGSSLMode:        getEnv("PG_SSL_MODE", "disable"),
+		PGMaxOpenConns:   parseInt(getEnv("PG_MAX_OPEN_CONNS", "25")),
+		PGMaxIdleConns:   parseInt(getEnv("PG_MAX_IDLE_CONNS", "10")),
 		RedisHost:         getEnv("REDIS_HOST", "localhost"),
 		RedisPort:         getEnv("REDIS_PORT", "6379"),
 		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
-		MigrationPath:     getEnv("MIGRATION_PATH", "migrations/mysql"),
+		MigrationPath:     getEnv("MIGRATION_PATH", "migrations/postgres"),
 		CORSAllowOrigins:  getEnv("CORS_ALLOW_ORIGINS", "*"),
 		ShutdownTimeout:   parseDuration(getEnv("SHUTDOWN_TIMEOUT", "10s")),
 		RequestTimeout:    parseDuration(getEnv("REQUEST_TIMEOUT", "30s")),

@@ -15,24 +15,24 @@ type UserRepository interface {
 type TokenRepository interface {
 	Save(ctx context.Context, token *entity.RefreshToken) error
 	FindByToken(ctx context.Context, token string) (*entity.RefreshToken, error)
-	DeleteByUserID(ctx context.Context, userID uint) error
+	DeleteByUserID(ctx context.Context, userID string) error
 	DeleteByToken(ctx context.Context, token string) error
-	MarkTokenUsed(ctx context.Context, token string, userID uint) error
-	FindUsedToken(ctx context.Context, token string) (uint, error)
+	MarkTokenUsed(ctx context.Context, token string, userID string) error
+	FindUsedToken(ctx context.Context, token string) (string, error)
 	BlacklistAccessToken(ctx context.Context, jti string, ttl time.Duration) error
 	IsAccessTokenBlacklisted(ctx context.Context, jti string) (bool, error)
-	RevokeAllAccessTokens(ctx context.Context, userID uint, ttl time.Duration) error
-	IsRevokedForUser(ctx context.Context, userID uint, issuedAt int64) (bool, error)
+	RevokeAllAccessTokens(ctx context.Context, userID string, ttl time.Duration) error
+	IsRevokedForUser(ctx context.Context, userID string, issuedAt int64) (bool, error)
 }
 
 type TokenClaims struct {
-	UserID   uint
+	UserID   string
 	JTI      string
 	IssuedAt int64
 }
 
 type TokenGenerator interface {
-	GenerateAccessToken(userID uint) (string, error)
+	GenerateAccessToken(userID string) (string, error)
 	ValidateToken(tokenString string) (*TokenClaims, error)
 	AccessExpirySeconds() int
 	RefreshExpiry() time.Duration

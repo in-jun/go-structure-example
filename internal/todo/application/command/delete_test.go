@@ -10,15 +10,15 @@ import (
 )
 
 func makeTodo() *entity.Todo {
-	t, _ := entity.NewTodo(1, "Test", "", time.Now().Add(time.Hour))
-	t.SetID(1)
+	t, _ := entity.NewTodo(testUUID, "Test", "", time.Now().Add(time.Hour))
 	return t
 }
 
 func TestDeleteHandler_Success(t *testing.T) {
-	h := NewDeleteHandler(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	h := NewDeleteHandler(&mockTodoRepo{todo: todo})
 
-	err := h.Handle(context.Background(), Delete{UserID: 1, TodoID: 1})
+	err := h.Handle(context.Background(), Delete{UserID: testUUID, TodoID: todo.ID()})
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
@@ -27,16 +27,17 @@ func TestDeleteHandler_Success(t *testing.T) {
 func TestDeleteHandler_NotFound(t *testing.T) {
 	h := NewDeleteHandler(&mockTodoRepo{err: errors.NotFound("not found")})
 
-	err := h.Handle(context.Background(), Delete{UserID: 1, TodoID: 99})
+	err := h.Handle(context.Background(), Delete{UserID: testUUID, TodoID: "some-id"})
 	if err == nil {
 		t.Fatal("expected error for not found, got nil")
 	}
 }
 
 func TestDeleteHandler_Forbidden(t *testing.T) {
-	h := NewDeleteHandler(&mockTodoRepo{todo: makeTodo()})
+	todo := makeTodo()
+	h := NewDeleteHandler(&mockTodoRepo{todo: todo})
 
-	err := h.Handle(context.Background(), Delete{UserID: 999, TodoID: 1})
+	err := h.Handle(context.Background(), Delete{UserID: "660e8400-e29b-41d4-a716-446655440000", TodoID: todo.ID()})
 	if err == nil {
 		t.Fatal("expected forbidden error, got nil")
 	}

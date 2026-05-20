@@ -3,15 +3,17 @@ package entity
 import (
 	"errors"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var (
-	errInvalidUser          = errors.New("email, hashed password, and name are required")
+	errInvalidUser            = errors.New("email, hashed password, and name are required")
 	errInvalidReconstructUser = errors.New("id, email, hashed password, and name are required")
 )
 
 type User struct {
-	id        uint
+	id        string
 	email     string
 	password  string
 	name      string
@@ -25,6 +27,7 @@ func NewUser(email, hashedPassword, name string) (*User, error) {
 	}
 	now := time.Now()
 	return &User{
+		id:        uuid.New().String(),
 		email:     email,
 		password:  hashedPassword,
 		name:      name,
@@ -33,8 +36,8 @@ func NewUser(email, hashedPassword, name string) (*User, error) {
 	}, nil
 }
 
-func ReconstructUser(id uint, email, password, name string, createdAt, updatedAt time.Time) (*User, error) {
-	if id == 0 || email == "" || password == "" || name == "" {
+func ReconstructUser(id, email, password, name string, createdAt, updatedAt time.Time) (*User, error) {
+	if id == "" || email == "" || password == "" || name == "" {
 		return nil, errInvalidReconstructUser
 	}
 	return &User{
@@ -47,10 +50,9 @@ func ReconstructUser(id uint, email, password, name string, createdAt, updatedAt
 	}, nil
 }
 
-func (u *User) ID() uint             { return u.id }
-func (u *User) Email() string         { return u.email }
+func (u *User) ID() string             { return u.id }
+func (u *User) Email() string          { return u.email }
 func (u *User) HashedPassword() string { return u.password }
-func (u *User) Name() string          { return u.name }
-func (u *User) CreatedAt() time.Time  { return u.createdAt }
-func (u *User) UpdatedAt() time.Time  { return u.updatedAt }
-func (u *User) SetID(id uint)         { u.id = id }
+func (u *User) Name() string           { return u.name }
+func (u *User) CreatedAt() time.Time   { return u.createdAt }
+func (u *User) UpdatedAt() time.Time   { return u.updatedAt }
