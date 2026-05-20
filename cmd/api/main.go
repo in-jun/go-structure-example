@@ -73,7 +73,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	hasher := crypto.NewBcryptHasher()
+	hasher := crypto.NewBcryptPasswordHasher()
 
 	dbGetter := transaction.NewDBGetter(mysqlDB)
 	transactor := transaction.NewTransactor(mysqlDB)

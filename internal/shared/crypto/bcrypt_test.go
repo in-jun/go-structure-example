@@ -2,8 +2,8 @@ package crypto
 
 import "testing"
 
-func TestBcryptHasher_HashAndCompare(t *testing.T) {
-	h := NewBcryptHasher()
+func TestBcryptPasswordHasher_HashAndCompare(t *testing.T) {
+	h := NewBcryptPasswordHasher()
 	password := "test-password"
 
 	hashed, err := h.Hash(password)
@@ -25,8 +25,8 @@ func TestBcryptHasher_HashAndCompare(t *testing.T) {
 	}
 }
 
-func TestBcryptHasher_DifferentHashes(t *testing.T) {
-	h := NewBcryptHasher()
+func TestBcryptPasswordHasher_DifferentHashes(t *testing.T) {
+	h := NewBcryptPasswordHasher()
 	h1, _ := h.Hash("password")
 	h2, _ := h.Hash("password")
 	if h1 == h2 {
