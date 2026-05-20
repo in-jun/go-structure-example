@@ -40,13 +40,34 @@ func TestNewRefreshToken(t *testing.T) {
 }
 
 func TestRefreshToken_IsExpired(t *testing.T) {
-	expired := ReconstructRefreshToken("tok", 1, time.Now().Add(-time.Hour))
+	expired, _ := ReconstructRefreshToken("tok", 1, time.Now().Add(-time.Hour))
 	if !expired.IsExpired() {
 		t.Error("expected token to be expired")
 	}
 
-	valid := ReconstructRefreshToken("tok", 1, time.Now().Add(time.Hour))
+	valid, _ := ReconstructRefreshToken("tok", 1, time.Now().Add(time.Hour))
 	if valid.IsExpired() {
 		t.Error("expected token to be valid")
+	}
+}
+
+func TestReconstructRefreshToken_Validation(t *testing.T) {
+	now := time.Now().Add(time.Hour)
+
+	if _, err := ReconstructRefreshToken("", 1, now); err == nil {
+		t.Error("expected error for empty token")
+	}
+	if _, err := ReconstructRefreshToken("tok", 0, now); err == nil {
+		t.Error("expected error for zero userID")
+	}
+	if _, err := ReconstructRefreshToken("tok", 1, time.Time{}); err == nil {
+		t.Error("expected error for zero expiresAt")
+	}
+	rt, err := ReconstructRefreshToken("tok", 1, now)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rt.Token() != "tok" {
+		t.Errorf("expected token 'tok', got %q", rt.Token())
 	}
 }

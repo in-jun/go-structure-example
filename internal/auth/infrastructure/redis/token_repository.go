@@ -79,7 +79,11 @@ func (r *tokenRepository) FindByToken(ctx context.Context, tokenStr string) (*en
 	if err := json.Unmarshal([]byte(data), &raw); err != nil {
 		return nil, errors.Internal("Failed to unmarshal refresh token")
 	}
-	return entity.ReconstructRefreshToken(raw.Token, raw.UserID, raw.ExpiresAt), nil
+	rt, err := entity.ReconstructRefreshToken(raw.Token, raw.UserID, raw.ExpiresAt)
+	if err != nil {
+		return nil, errors.Internal("Failed to reconstruct refresh token")
+	}
+	return rt, nil
 }
 
 func (r *tokenRepository) DeleteByUserID(ctx context.Context, userID uint) error {

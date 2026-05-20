@@ -7,7 +7,10 @@ import (
 	"time"
 )
 
-var errInvalidRefreshToken = errors.New("user ID and expiration time are required")
+var (
+	errInvalidRefreshToken          = errors.New("user ID and expiration time are required")
+	errInvalidReconstructRefreshToken = errors.New("token, user ID, and expiration time are required")
+)
 
 type RefreshToken struct {
 	token     string
@@ -30,8 +33,11 @@ func NewRefreshToken(userID uint, expiresAt time.Time) (*RefreshToken, error) {
 	}, nil
 }
 
-func ReconstructRefreshToken(token string, userID uint, expiresAt time.Time) *RefreshToken {
-	return &RefreshToken{token: token, userID: userID, expiresAt: expiresAt}
+func ReconstructRefreshToken(token string, userID uint, expiresAt time.Time) (*RefreshToken, error) {
+	if token == "" || userID == 0 || expiresAt.IsZero() {
+		return nil, errInvalidReconstructRefreshToken
+	}
+	return &RefreshToken{token: token, userID: userID, expiresAt: expiresAt}, nil
 }
 
 func (t *RefreshToken) Token() string        { return t.token }
