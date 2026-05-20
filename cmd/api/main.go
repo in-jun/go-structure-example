@@ -130,7 +130,7 @@ func main() {
 	router.Use(middleware.BodyLimit(1 << 20)) // 1 MiB
 	router.Use(middleware.SecurityHeaders())
 	router.Use(middleware.AccessLog())
-	router.Use(middleware.CORS())
+	router.Use(middleware.CORS(config.AppConfig.CORSAllowOrigins))
 	router.Use(middleware.RateLimit(redisClient, config.AppConfig.RateLimitBurst))
 	router.Use(middleware.ErrorHandler())
 

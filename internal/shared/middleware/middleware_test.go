@@ -204,6 +204,68 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 }
 
+func TestCORS_Wildcard(t *testing.T) {
+	r := newTestEngine(CORS("*"))
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("Origin", "http://example.com")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if acao := w.Header().Get("Access-Control-Allow-Origin"); acao != "*" {
+		t.Errorf("expected '*', got %q", acao)
+	}
+}
+
+func TestCORS_SpecificOrigin(t *testing.T) {
+	r := newTestEngine(CORS("http://a.com, http://b.com"))
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("Origin", "http://b.com")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if acao := w.Header().Get("Access-Control-Allow-Origin"); acao != "http://b.com" {
+		t.Errorf("expected 'http://b.com', got %q", acao)
+	}
+}
+
+func TestCORS_UnknownOrigin(t *testing.T) {
+	r := newTestEngine(CORS("http://a.com"))
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("Origin", "http://evil.com")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if acao := w.Header().Get("Access-Control-Allow-Origin"); acao != "" {
+		t.Errorf("expected empty, got %q", acao)
+	}
+}
+
+func TestCORS_Preflight(t *testing.T) {
+	r := newTestEngine(CORS("*"))
+	r.OPTIONS("/test", func(c *gin.Context) {})
+
+	req := httptest.NewRequest("OPTIONS", "/test", nil)
+	req.Header.Set("Origin", "http://example.com")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
 func TestBodyLimit_Within(t *testing.T) {
 	r := newTestEngine(BodyLimit(1024))
 	r.POST("/test", func(c *gin.Context) {
