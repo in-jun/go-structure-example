@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 
@@ -16,6 +16,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/config"
 	"github.com/in-jun/go-structure-example/internal/shared/crypto"
 	"github.com/in-jun/go-structure-example/internal/shared/database"
+	"github.com/in-jun/go-structure-example/internal/shared/logging"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
 	todoapp "github.com/in-jun/go-structure-example/internal/todo/application"
 	todocmd "github.com/in-jun/go-structure-example/internal/todo/application/command"
@@ -31,16 +32,19 @@ import (
 
 func main() {
 	config.Load()
+	logging.Init("go-structure-example")
 
 	redisClient, err := database.NewRedis()
 	if err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+		slog.Error("failed to connect to Redis", "error", err)
+		return
 	}
 	defer redisClient.Close()
 
 	mysqlDB, err := database.NewMySQL()
 	if err != nil {
-		log.Fatalf("Failed to connect to MySQL: %v", err)
+		slog.Error("failed to connect to MySQL", "error", err)
+		return
 	}
 	defer mysqlDB.Close()
 
@@ -50,7 +54,8 @@ func main() {
 		config.AppConfig.JWTRefreshExpiry,
 	)
 	if err != nil {
-		log.Fatalf("Failed to create token generator: %v", err)
+		slog.Error("failed to create token generator", "error", err)
+		return
 	}
 
 	hasher := crypto.NewBcryptHasher()
@@ -101,8 +106,11 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.Use(gin.Logger())
+	router.Use(middleware.RequestID())
+	router.Use(middleware.SecurityHeaders())
+	router.Use(middleware.AccessLog())
 	router.Use(middleware.CORS())
+	router.Use(middleware.RateLimit(redisClient, 100))
 	router.Use(middleware.ErrorHandler())
 
 	api := router.Group("/api/v1")
@@ -112,8 +120,8 @@ func main() {
 		todoHandler.RegisterRoutes(api)
 	}
 
-	log.Printf("Starting server on port %s", config.AppConfig.AppPort)
+	slog.Info("server starting", "port", config.AppConfig.AppPort)
 	if err := router.Run(":" + config.AppConfig.AppPort); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		slog.Error("server failed", "error", err)
 	}
 }
