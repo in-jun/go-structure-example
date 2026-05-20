@@ -1,0 +1,51 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      APP_PORT: "8080"
+      JWT_SECRET: "change-me-in-production"
+      JWT_ACCESS_EXPIRY: "15m"
+      JWT_REFRESH_EXPIRY: "168h"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: app_db
+      DB_USER: app
+      DB_PASSWORD: app
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: app_db
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql-data:

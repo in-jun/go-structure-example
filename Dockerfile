@@ -1,13 +1,18 @@
 FROM golang:1.24-alpine AS builder
+
+RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
-COPY . .
+COPY go.mod go.sum ./
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api
+COPY . .
+ARG VERSION=dev
+ARG GIT_COMMIT=unknown
+RUN BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) && \
+    CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION -X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT" -o /api ./cmd/api
 
 FROM scratch
-WORKDIR /app
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /app/main .
-COPY migrations/ migrations/
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /api /api
 EXPOSE 8080
-CMD ["/app/main"]
+ENTRYPOINT ["/api"]
