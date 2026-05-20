@@ -38,6 +38,7 @@ func (m *mockTokenRepo) IsRevokedForUser(_ context.Context, _ uint, _ int64) (bo
 }
 
 var _ domain.TokenRepository = (*mockTokenRepo)(nil)
+var _ domain.TokenGenerator = (*mockTokenGen)(nil)
 
 type mockTokenGen struct {
 	claims *domain.TokenClaims
