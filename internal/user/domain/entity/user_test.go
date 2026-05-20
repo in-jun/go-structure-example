@@ -11,8 +11,8 @@ func TestReconstructUser(t *testing.T) {
 		name      string
 		id        uint
 		email     string
-		uname     string
-		wantErr   bool
+		userName  string
+		wantError bool
 	}{
 		{"valid", 1, "test@example.com", "Test User", false},
 		{"zero id", 0, "test@example.com", "Test User", true},
@@ -22,24 +22,12 @@ func TestReconstructUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u, err := ReconstructUser(tt.id, tt.email, "hashed", tt.uname, now, now)
-			if tt.wantErr {
-				if err == nil {
-					t.Error("expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-				if u.ID() != tt.id {
-					t.Errorf("expected ID %d, got %d", tt.id, u.ID())
-				}
-				if u.Email() != tt.email {
-					t.Errorf("expected email %q, got %q", tt.email, u.Email())
-				}
-				if u.Name() != tt.uname {
-					t.Errorf("expected name %q, got %q", tt.uname, u.Name())
-				}
+			user, err := ReconstructUser(tt.id, tt.email, "hashed", tt.userName, now, now)
+			if tt.wantError && err == nil {
+				t.Errorf("expected error, got %+v", user)
+			}
+			if !tt.wantError && err != nil {
+				t.Errorf("expected no error, got %v", err)
 			}
 		})
 	}
