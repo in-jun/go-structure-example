@@ -7,12 +7,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/in-jun/go-structure-example/internal/shared/config"
-
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/in-jun/go-structure-example/internal/shared/config"
 )
 
 func NewMySQL() (*sql.DB, error) {
@@ -50,13 +49,23 @@ func NewMySQL() (*sql.DB, error) {
 }
 
 func runMigrations(db *sql.DB) error {
+	// Advisory lock prevents multiple instances from migrating simultaneously.
+	var acquired int
+	if err := db.QueryRow("SELECT GET_LOCK('migration_lock', 30)").Scan(&acquired); err != nil {
+		return fmt.Errorf("failed to acquire migration lock: %w", err)
+	}
+	if acquired != 1 {
+		return fmt.Errorf("could not acquire migration lock (timeout)")
+	}
+	defer db.Exec("SELECT RELEASE_LOCK('migration_lock')")
+
 	driver, err := mysql.WithInstance(db, &mysql.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to create driver: %w", err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations/mysql",
+		"file://"+config.AppConfig.MigrationPath,
 		"mysql",
 		driver,
 	)

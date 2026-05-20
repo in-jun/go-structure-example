@@ -22,6 +22,7 @@ type Config struct {
 	RedisHost        string
 	RedisPort        string
 	RedisPassword    string
+	MigrationPath    string
 	CORSAllowOrigins string
 	ShutdownTimeout  time.Duration
 	RequestTimeout   time.Duration
@@ -46,6 +47,7 @@ func Load() {
 		RedisHost:         getEnv("REDIS_HOST", "localhost"),
 		RedisPort:         getEnv("REDIS_PORT", "6379"),
 		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
+		MigrationPath:     getEnv("MIGRATION_PATH", "migrations/mysql"),
 		CORSAllowOrigins:  getEnv("CORS_ALLOW_ORIGINS", "*"),
 		ShutdownTimeout:   parseDuration(getEnv("SHUTDOWN_TIMEOUT", "10s")),
 		RequestTimeout:    parseDuration(getEnv("REQUEST_TIMEOUT", "30s")),
