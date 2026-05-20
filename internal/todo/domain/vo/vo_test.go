@@ -39,6 +39,7 @@ func TestNewUpdateTodoVO(t *testing.T) {
 	}{
 		{"valid", "Updated title", false},
 		{"empty title", "", true},
+		{"too long title", string(make([]byte, 256)), true},
 	}
 
 	for _, tt := range tests {
