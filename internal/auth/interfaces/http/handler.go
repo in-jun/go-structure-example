@@ -12,11 +12,12 @@ import (
 
 type Handler struct {
 	commands      application.CommandUseCase
+	queries       application.QueryUseCase
 	validateToken middleware.TokenValidator
 }
 
-func NewHandler(commands application.CommandUseCase, validateToken middleware.TokenValidator) *Handler {
-	return &Handler{commands: commands, validateToken: validateToken}
+func NewHandler(commands application.CommandUseCase, queries application.QueryUseCase, validateToken middleware.TokenValidator) *Handler {
+	return &Handler{commands: commands, queries: queries, validateToken: validateToken}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {

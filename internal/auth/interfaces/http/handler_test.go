@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/in-jun/go-structure-example/internal/auth/application"
 	"github.com/in-jun/go-structure-example/internal/auth/application/command"
+	"github.com/in-jun/go-structure-example/internal/auth/application/query"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
 )
@@ -27,8 +29,16 @@ func (m *mockCommandUseCase) Login(_ context.Context, _ command.Login) (*command
 func (m *mockCommandUseCase) Refresh(_ context.Context, _ command.Refresh) (*command.RefreshResult, error) {
 	return m.refreshResp, m.err
 }
-func (m *mockCommandUseCase) Logout(_ context.Context, _ command.Logout) error    { return m.err }
+func (m *mockCommandUseCase) Logout(_ context.Context, _ command.Logout) error      { return m.err }
 func (m *mockCommandUseCase) LogoutAll(_ context.Context, _ command.LogoutAll) error { return m.err }
+
+type mockQueryUseCase struct{}
+
+func (m *mockQueryUseCase) ValidateToken(_ context.Context, _ query.Validate) (*query.ValidateResult, error) {
+	return &query.ValidateResult{UserID: 1, JTI: "test-jti"}, nil
+}
+
+var _ application.QueryUseCase = (*mockQueryUseCase)(nil)
 
 func setupRouter(cmdMock *mockCommandUseCase) *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -39,7 +49,7 @@ func setupRouter(cmdMock *mockCommandUseCase) *gin.Engine {
 		return &middleware.TokenValidateResult{UserID: 1, JTI: "test-jti"}, nil
 	})
 
-	h := NewHandler(cmdMock, tokenValidator)
+	h := NewHandler(cmdMock, &mockQueryUseCase{}, tokenValidator)
 	api := r.Group("/api/v1")
 	h.RegisterRoutes(api)
 	return r

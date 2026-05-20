@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/in-jun/go-structure-example/internal/auth/application/command"
+	"github.com/in-jun/go-structure-example/internal/auth/application/query"
 )
 
 type CommandUseCase interface {
@@ -14,7 +15,14 @@ type CommandUseCase interface {
 	LogoutAll(ctx context.Context, cmd command.LogoutAll) error
 }
 
-var _ CommandUseCase = (*service)(nil)
+type QueryUseCase interface {
+	ValidateToken(ctx context.Context, qry query.Validate) (*query.ValidateResult, error)
+}
+
+var (
+	_ CommandUseCase = (*service)(nil)
+	_ QueryUseCase   = (*service)(nil)
+)
 
 type service struct {
 	register  *command.RegisterHandler
@@ -22,14 +30,16 @@ type service struct {
 	refresh   *command.RefreshHandler
 	logout    *command.LogoutHandler
 	logoutAll *command.LogoutAllHandler
+	validate  *query.ValidateHandler
 }
 
 func NewService(
-	register  *command.RegisterHandler,
-	login     *command.LoginHandler,
-	refresh   *command.RefreshHandler,
-	logout    *command.LogoutHandler,
+	register *command.RegisterHandler,
+	login *command.LoginHandler,
+	refresh *command.RefreshHandler,
+	logout *command.LogoutHandler,
 	logoutAll *command.LogoutAllHandler,
+	validate *query.ValidateHandler,
 ) *service {
 	return &service{
 		register:  register,
@@ -37,6 +47,7 @@ func NewService(
 		refresh:   refresh,
 		logout:    logout,
 		logoutAll: logoutAll,
+		validate:  validate,
 	}
 }
 
@@ -58,4 +69,8 @@ func (s *service) Logout(ctx context.Context, cmd command.Logout) error {
 
 func (s *service) LogoutAll(ctx context.Context, cmd command.LogoutAll) error {
 	return s.logoutAll.Handle(ctx, cmd)
+}
+
+func (s *service) ValidateToken(ctx context.Context, qry query.Validate) (*query.ValidateResult, error) {
+	return s.validate.Handle(ctx, qry)
 }

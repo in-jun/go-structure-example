@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/in-jun/go-structure-example/internal/auth/application/command"
+	"github.com/in-jun/go-structure-example/internal/auth/application/query"
 	"github.com/in-jun/go-structure-example/internal/auth/domain"
 	"github.com/in-jun/go-structure-example/internal/auth/domain/entity"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
@@ -84,6 +85,7 @@ func newTestService(userRepo *mockUserRepo, tokenRepo *mockTokenRepo, tokenGen *
 		command.NewRefreshHandler(tokenRepo, tokenGen),
 		command.NewLogoutHandler(tokenRepo, tokenGen),
 		command.NewLogoutAllHandler(tokenRepo, tokenGen),
+		query.NewValidateHandler(tokenRepo, tokenGen),
 	)
 }
 
@@ -172,6 +174,7 @@ func newServiceWithRepo(tokenRepo domain.TokenRepository) *service {
 		refresh:   command.NewRefreshHandler(tokenRepo, tokenGen),
 		logout:    command.NewLogoutHandler(tokenRepo, tokenGen),
 		logoutAll: command.NewLogoutAllHandler(tokenRepo, tokenGen),
+		validate:  query.NewValidateHandler(tokenRepo, tokenGen),
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 
 	authapp "github.com/in-jun/go-structure-example/internal/auth/application"
 	authcmd "github.com/in-jun/go-structure-example/internal/auth/application/command"
+	authqry "github.com/in-jun/go-structure-example/internal/auth/application/query"
 	authjwt "github.com/in-jun/go-structure-example/internal/auth/infrastructure/jwt"
 	authmysql "github.com/in-jun/go-structure-example/internal/auth/infrastructure/mysql"
 	authredis "github.com/in-jun/go-structure-example/internal/auth/infrastructure/redis"
@@ -15,7 +16,6 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/config"
 	"github.com/in-jun/go-structure-example/internal/shared/crypto"
 	"github.com/in-jun/go-structure-example/internal/shared/database"
-	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
 	todoapp "github.com/in-jun/go-structure-example/internal/todo/application"
 	todocmd "github.com/in-jun/go-structure-example/internal/todo/application/command"
@@ -60,35 +60,24 @@ func main() {
 	userRepo := usermysql.NewUserRepository(mysqlDB)
 	todoRepo := todomysql.NewTodoRepository(mysqlDB)
 
-	validateToken := func(ctx context.Context, tokenString string) (*middleware.TokenValidateResult, error) {
-		claims, err := tokenGen.ValidateToken(tokenString)
-		if err != nil {
-			return nil, errors.Unauthorized("Invalid token")
-		}
-		blacklisted, err := tokenRepo.IsAccessTokenBlacklisted(ctx, claims.JTI)
-		if err != nil {
-			return nil, errors.Internal("Failed to verify token")
-		}
-		if blacklisted {
-			return nil, errors.Unauthorized("Token has been revoked")
-		}
-		revoked, err := tokenRepo.IsRevokedForUser(ctx, claims.UserID, claims.IssuedAt)
-		if err != nil {
-			return nil, errors.Internal("Failed to verify token")
-		}
-		if revoked {
-			return nil, errors.Unauthorized("All sessions have been revoked")
-		}
-		return &middleware.TokenValidateResult{UserID: claims.UserID, JTI: claims.JTI}, nil
-	}
-
 	authService := authapp.NewService(
 		authcmd.NewRegisterHandler(authUserRepo, hasher),
 		authcmd.NewLoginHandler(authUserRepo, tokenRepo, tokenGen, hasher),
 		authcmd.NewRefreshHandler(tokenRepo, tokenGen),
 		authcmd.NewLogoutHandler(tokenRepo, tokenGen),
 		authcmd.NewLogoutAllHandler(tokenRepo, tokenGen),
+		authqry.NewValidateHandler(tokenRepo, tokenGen),
 	)
+
+	var authQueries authapp.QueryUseCase = authService
+
+	validateToken := middleware.TokenValidator(func(ctx context.Context, tokenString string) (*middleware.TokenValidateResult, error) {
+		result, err := authQueries.ValidateToken(ctx, authqry.Validate{TokenString: tokenString})
+		if err != nil {
+			return nil, err
+		}
+		return &middleware.TokenValidateResult{UserID: result.UserID, JTI: result.JTI}, nil
+	})
 
 	userService := userapp.NewService(
 		usercmd.NewUpdateProfileHandler(userRepo),
@@ -106,7 +95,7 @@ func main() {
 		todoqry.NewListTodosHandler(todoRepo),
 	)
 
-	authHandler := authhttp.NewHandler(authService, validateToken)
+	authHandler := authhttp.NewHandler(authService, authQueries, validateToken)
 	userHandler := userhttp.NewHandler(userService, userService, validateToken)
 	todoHandler := todohttp.NewHandler(todoService, todoService, validateToken)
 
