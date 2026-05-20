@@ -116,6 +116,7 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.RequestID())
+	router.Use(middleware.BodyLimit(1 << 20)) // 1 MiB
 	router.Use(middleware.SecurityHeaders())
 	router.Use(middleware.AccessLog())
 	router.Use(middleware.CORS())
