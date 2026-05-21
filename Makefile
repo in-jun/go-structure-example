@@ -1,17 +1,21 @@
-VERSION  ?= dev
+SERVICES  := auction bid payment gateway auth
+VERSION   ?= dev
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 
-.PHONY: all build test test-cover lint vet fmt docker-up docker-down docker-build clean health
+.PHONY: all build test test-cover lint vet fmt docker-build docker-up docker-down clean proto migrate-up
 
 all: lint test build
 
 ## Build
 build:
-	CGO_ENABLED=0 go build -ldflags "-s -w \
-		-X main.Version=$(VERSION) \
-		-X main.BuildTime=$$(date -u +%Y-%m-%dT%H:%M:%SZ) \
-		-X main.GitCommit=$(GIT_COMMIT)" \
-		-o bin/api ./cmd/api
+	@for svc in $(SERVICES); do \
+		echo "building $$svc..."; \
+		CGO_ENABLED=0 go build -ldflags "-s -w \
+			-X main.Version=$(VERSION) \
+			-X main.BuildTime=$$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+			-X main.GitCommit=$(GIT_COMMIT)" \
+			-o bin/$$svc ./cmd/$$svc; \
+	done
 
 ## Test
 test:
@@ -43,6 +47,19 @@ docker-down:
 
 docker-logs:
 	docker compose logs -f
+
+## Database
+migrate-up:
+	@for svc in auction bid payment auth; do \
+		echo "migrating $$svc..."; \
+		migrate -path migrations/$$svc -database "postgres://postgres:postgres@localhost:5432/$${svc}_db?sslmode=disable" up; \
+	done
+
+## Proto
+proto:
+	protoc --go_out=. --go_opt=paths=source_relative \
+		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+		proto/auction/v1/auction.proto
 
 ## Misc
 health:
