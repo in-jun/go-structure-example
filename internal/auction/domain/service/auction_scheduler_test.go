@@ -16,6 +16,8 @@ func TestAuctionScheduler_ValidateTiming(t *testing.T) {
 	}{
 		{"valid 2 hours", time.Now().Add(2 * time.Hour), nil},
 		{"valid 7 days", time.Now().Add(7 * 24 * time.Hour), nil},
+		{"at minimum boundary", time.Now().Add(MinAuctionDuration + time.Second), nil},
+		{"at maximum boundary", time.Now().Add(MaxAuctionDuration - time.Second), nil},
 		{"too short", time.Now().Add(30 * time.Minute), ErrDurationTooShort},
 		{"too long", time.Now().Add(31 * 24 * time.Hour), ErrDurationTooLong},
 	}
