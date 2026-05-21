@@ -181,3 +181,69 @@ func TestBidService_DetermineWinner(t *testing.T) {
 		t.Fatalf("DetermineWinner() error = %v", err)
 	}
 }
+
+func TestBidService_DetermineWinner_NoBids(t *testing.T) {
+	auctionID := uuid.New().String()
+	svc := newTestService(&mockBidRepo{bid: nil}, &mockAuctionClient{})
+
+	err := svc.DetermineWinner(context.Background(), command.DetermineWinner{AuctionID: auctionID})
+	if err == nil {
+		t.Error("expected error when no bids exist")
+	}
+}
+
+func TestBidService_PlaceBid_BelowStartPrice(t *testing.T) {
+	auctionID := uuid.New().String()
+	bidderID := uuid.New().String()
+
+	client := &mockAuctionClient{
+		info: &domain.AuctionInfo{
+			ID: auctionID, SellerID: uuid.New().String(), StartPrice: 2000, Status: "open",
+		},
+	}
+	svc := newTestService(&mockBidRepo{}, client)
+
+	_, err := svc.PlaceBid(context.Background(), command.PlaceBid{
+		UserID:    bidderID,
+		AuctionID: auctionID,
+		Amount:    500,
+	})
+	if err == nil {
+		t.Error("expected error for bid below start price")
+	}
+}
+
+func TestBidService_PlaceBid_BidTooLow(t *testing.T) {
+	auctionID := uuid.New().String()
+	bidderID := uuid.New().String()
+	now := time.Now()
+	existingBid := entity.ReconstructBid(uuid.New().String(), auctionID, uuid.New().String(), 1000, now)
+
+	client := &mockAuctionClient{
+		info: &domain.AuctionInfo{
+			ID: auctionID, SellerID: uuid.New().String(), StartPrice: 500, Status: "open",
+		},
+	}
+	svc := newTestService(&mockBidRepo{bid: existingBid}, client)
+
+	_, err := svc.PlaceBid(context.Background(), command.PlaceBid{
+		UserID:    bidderID,
+		AuctionID: auctionID,
+		Amount:    1050,
+	})
+	if err == nil {
+		t.Error("expected error for bid below minimum increment")
+	}
+}
+
+func TestBidService_GetEvents(t *testing.T) {
+	svc := newTestService(&mockBidRepo{}, &mockAuctionClient{})
+
+	result, err := svc.GetEvents(context.Background(), query.EventHistory{AuctionID: uuid.New().String()})
+	if err != nil {
+		t.Fatalf("GetEvents() error = %v", err)
+	}
+	if len(result.Events) != 0 {
+		t.Errorf("expected 0 events, got %d", len(result.Events))
+	}
+}
