@@ -59,6 +59,7 @@ func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *server
 
 	mux.Handle("GET /api/v1/auctions/{auction_id}/bids", noopMw(http.HandlerFunc(h.ListBids)))
 	mux.Handle("GET /api/v1/auctions/{auction_id}/bids/highest", noopMw(http.HandlerFunc(h.GetHighest)))
+	mux.Handle("GET /api/v1/auctions/{auction_id}/bids/events", noopMw(http.HandlerFunc(h.GetEvents)))
 	mux.Handle("POST /api/v1/auctions/{auction_id}/bids", noopMw(injectUser(http.HandlerFunc(h.PlaceBid))))
 
 	return mux
@@ -161,5 +162,17 @@ func TestHandler_GetHighest_NotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("expected status 404, got %d", w.Code)
+	}
+}
+
+func TestHandler_GetEvents(t *testing.T) {
+	router := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("GET", "/api/v1/auctions/"+testAuctionID+"/bids/events", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Code)
 	}
 }
