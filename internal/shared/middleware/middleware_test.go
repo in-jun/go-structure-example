@@ -458,3 +458,52 @@ func TestRetryTransport_POSTWithIdempotencyKey(t *testing.T) {
 		t.Errorf("expected 2 calls, got %d", calls)
 	}
 }
+
+func TestCircuitBreaker_SuccessfulRequest(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	cb := NewCircuitBreakerTransport(ts.Client().Transport, "test-svc")
+	req, _ := http.NewRequest("GET", ts.URL+"/health", nil)
+	resp, err := cb.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestCircuitBreaker_OpenCircuit_Returns503(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	cb := NewCircuitBreakerTransport(ts.Client().Transport, "test-svc-open")
+	req, _ := http.NewRequest("GET", ts.URL+"/", nil)
+
+	// trip the circuit: need > 5 consecutive failures
+	for i := 0; i < 6; i++ {
+		r, _ := http.NewRequest("GET", ts.URL+"/", nil)
+		resp, _ := cb.RoundTrip(r)
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}
+
+	// circuit should now be open — next request gets 503 directly
+	resp, err := cb.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("unexpected error (should return 503 response): %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Errorf("expected 503 when circuit open, got %d", resp.StatusCode)
+	}
+}
