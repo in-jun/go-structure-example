@@ -38,6 +38,18 @@ func TestLoad_Defaults(t *testing.T) {
 	if AppConfig.NATSURL != "nats://localhost:4222" {
 		t.Errorf("expected default NATSURL 'nats://localhost:4222', got %q", AppConfig.NATSURL)
 	}
+	if AppConfig.AuthServiceURL != "http://localhost:8081" {
+		t.Errorf("expected default AuthServiceURL 'http://localhost:8081', got %q", AppConfig.AuthServiceURL)
+	}
+	if AppConfig.AuctionServiceURL != "http://localhost:8082" {
+		t.Errorf("expected default AuctionServiceURL 'http://localhost:8082', got %q", AppConfig.AuctionServiceURL)
+	}
+	if AppConfig.BidServiceURL != "http://localhost:8083" {
+		t.Errorf("expected default BidServiceURL 'http://localhost:8083', got %q", AppConfig.BidServiceURL)
+	}
+	if AppConfig.PaymentServiceURL != "http://localhost:8084" {
+		t.Errorf("expected default PaymentServiceURL 'http://localhost:8084', got %q", AppConfig.PaymentServiceURL)
+	}
 }
 
 func TestLoad_CustomEnv(t *testing.T) {
