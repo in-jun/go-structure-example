@@ -1,0 +1,158 @@
+package main
+
+import (
+	"context"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/in-jun/go-structure-example/internal/shared/config"
+	"github.com/in-jun/go-structure-example/internal/shared/database"
+	"github.com/in-jun/go-structure-example/internal/shared/health"
+	"github.com/in-jun/go-structure-example/internal/shared/logging"
+	"github.com/in-jun/go-structure-example/internal/shared/middleware"
+	sharedNats "github.com/in-jun/go-structure-example/internal/shared/nats"
+	"github.com/in-jun/go-structure-example/internal/shared/observability"
+	"github.com/in-jun/go-structure-example/internal/shared/outbox"
+	"github.com/in-jun/go-structure-example/internal/shared/server"
+	"github.com/in-jun/go-structure-example/internal/shared/transaction"
+
+	"github.com/in-jun/go-structure-example/internal/payment/application"
+	"github.com/in-jun/go-structure-example/internal/payment/application/command"
+	"github.com/in-jun/go-structure-example/internal/payment/application/query"
+	"github.com/in-jun/go-structure-example/internal/payment/domain/service"
+	"github.com/in-jun/go-structure-example/internal/payment/infrastructure/event"
+	"github.com/in-jun/go-structure-example/internal/payment/infrastructure/gateway"
+	paymentNats "github.com/in-jun/go-structure-example/internal/payment/infrastructure/nats"
+	"github.com/in-jun/go-structure-example/internal/payment/infrastructure/pg"
+	paymentHTTP "github.com/in-jun/go-structure-example/internal/payment/interfaces/http"
+)
+
+var (
+	Version   = "dev"
+	BuildTime = "unknown"
+	GitCommit = "unknown"
+)
+
+func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		resp, err := http.Get("http://localhost:" + os.Getenv("APP_PORT") + "/health/ready")
+		if err != nil || resp.StatusCode != 200 {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	config.Load()
+	logging.Init("payment-service")
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	observability.InitMetrics()
+	shutdownTracer, err := observability.InitTracer(ctx, "payment-service")
+	if err != nil {
+		slog.Warn("failed to init tracer", "error", err)
+	}
+	if shutdownTracer != nil {
+		defer shutdownTracer(context.Background())
+	}
+
+	pgDB, err := database.NewPostgres()
+	if err != nil {
+		slog.Error("failed to connect to PostgreSQL", "error", err)
+		os.Exit(1)
+	}
+	defer pgDB.Close()
+
+	nc, err := sharedNats.NewConnection()
+	if err != nil {
+		slog.Error("failed to connect to NATS", "error", err)
+		os.Exit(1)
+	}
+	defer nc.Drain()
+
+	dbGetter := transaction.NewDBGetter(pgDB)
+	transactor := transaction.NewTransactor(pgDB)
+
+	paymentRepo := pg.NewPaymentRepository(dbGetter)
+	mockGW := gateway.NewMockGateway()
+	processor := service.NewPaymentProcessor(mockGW)
+
+	pgPublisher := event.NewPublisher(dbGetter)
+	compositePublisher := event.NewCompositePublisher(pgPublisher, nc)
+
+	createPaymentHandler := command.NewCreatePaymentHandler(paymentRepo, compositePublisher, transactor)
+	confirmPaymentHandler := command.NewConfirmPaymentHandler(paymentRepo, processor, compositePublisher, transactor)
+	refundPaymentHandler := command.NewRefundPaymentHandler(paymentRepo, processor, compositePublisher, transactor)
+	getPaymentHandler := query.NewGetPaymentHandler(paymentRepo)
+
+	consumer := paymentNats.NewConsumer(nc, createPaymentHandler, dbGetter, transactor)
+	if err := consumer.Start(ctx); err != nil {
+		slog.Error("failed to start NATS consumer", "error", err)
+		os.Exit(1)
+	}
+	defer consumer.Stop()
+
+	relay := outbox.NewRelay(pgDB, nc, "payment")
+	go relay.Start(ctx)
+
+	svc := application.NewService(createPaymentHandler, confirmPaymentHandler, refundPaymentHandler, getPaymentHandler)
+
+	var commands application.CommandUseCase = svc
+	var queries application.QueryUseCase = svc
+
+	handler := paymentHTTP.NewHandler(commands, queries)
+
+	mux := server.NewRouter()
+
+	stack := server.Chain(
+		middleware.Recovery(),
+		middleware.Timeout(30*time.Second),
+		middleware.BodyLimit(1<<20),
+		middleware.RequestID(),
+		middleware.AccessLog(),
+		middleware.CORS(config.AppConfig.CORSAllowOrigins),
+		middleware.SecurityHeaders(),
+		middleware.Tracing("payment-service"),
+		middleware.Metrics("payment-service"),
+	)
+
+	mux.Handle("GET /metrics", observability.MetricsHandler())
+
+	healthChecker := health.NewChecker(pgDB, nc).WithBuildInfo(Version, BuildTime, GitCommit)
+	healthChecker.RegisterRoutes(mux)
+
+	handler.RegisterRoutes(mux, stack)
+
+	srv := &http.Server{
+		Addr:         ":" + config.AppConfig.AppPort,
+		Handler:      mux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	go func() {
+		slog.Info("service starting", "service", "payment-service", "port", config.AppConfig.AppPort)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), config.AppConfig.ShutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("server forced to shutdown", "error", err)
+	}
+
+	slog.Info("service stopped")
+}

@@ -1,0 +1,166 @@
+package main
+
+import (
+	"context"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/in-jun/go-structure-example/internal/shared/config"
+	"github.com/in-jun/go-structure-example/internal/shared/database"
+	"github.com/in-jun/go-structure-example/internal/shared/health"
+	"github.com/in-jun/go-structure-example/internal/shared/logging"
+	"github.com/in-jun/go-structure-example/internal/shared/middleware"
+	sharedNats "github.com/in-jun/go-structure-example/internal/shared/nats"
+	"github.com/in-jun/go-structure-example/internal/shared/observability"
+	"github.com/in-jun/go-structure-example/internal/shared/server"
+	"github.com/in-jun/go-structure-example/internal/shared/transaction"
+
+	"github.com/in-jun/go-structure-example/internal/bid/application"
+	"github.com/in-jun/go-structure-example/internal/bid/application/command"
+	"github.com/in-jun/go-structure-example/internal/bid/application/query"
+	"github.com/in-jun/go-structure-example/internal/bid/domain/service"
+	"github.com/in-jun/go-structure-example/internal/bid/infrastructure/event"
+	auctionGRPC "github.com/in-jun/go-structure-example/internal/bid/infrastructure/grpc"
+	bidNats "github.com/in-jun/go-structure-example/internal/bid/infrastructure/nats"
+	"github.com/in-jun/go-structure-example/internal/bid/infrastructure/pg"
+	"github.com/in-jun/go-structure-example/internal/shared/outbox"
+	bidHTTP "github.com/in-jun/go-structure-example/internal/bid/interfaces/http"
+)
+
+var (
+	Version   = "dev"
+	BuildTime = "unknown"
+	GitCommit = "unknown"
+)
+
+func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		resp, err := http.Get("http://localhost:" + os.Getenv("APP_PORT") + "/health/ready")
+		if err != nil || resp.StatusCode != 200 {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	config.Load()
+	logging.Init("bid-service")
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	observability.InitMetrics()
+	shutdownTracer, err := observability.InitTracer(ctx, "bid-service")
+	if err != nil {
+		slog.Warn("failed to init tracer", "error", err)
+	}
+	if shutdownTracer != nil {
+		defer shutdownTracer(context.Background())
+	}
+
+	pgDB, err := database.NewPostgres()
+	if err != nil {
+		slog.Error("failed to connect to PostgreSQL", "error", err)
+		os.Exit(1)
+	}
+	defer pgDB.Close()
+	nc, err := sharedNats.NewConnection()
+	if err != nil {
+		slog.Error("failed to connect to NATS", "error", err)
+		os.Exit(1)
+	}
+
+	dbGetter := transaction.NewDBGetter(pgDB)
+	transactor := transaction.NewTransactor(pgDB)
+
+	bidRepo := pg.NewBidRepository(dbGetter)
+	auctionClient, err := auctionGRPC.NewAuctionClient(config.AppConfig.AuctionGRPCAddress)
+	if err != nil {
+		slog.Error("failed to create auction gRPC client", "error", err)
+		os.Exit(1)
+	}
+	bidPolicy := &service.BidPolicy{}
+
+	pgPublisher := event.NewPublisher(dbGetter)
+	compositePublisher := event.NewCompositePublisher(pgPublisher, nc)
+
+	placeBidHandler := command.NewPlaceBidHandler(bidRepo, auctionClient, bidPolicy, compositePublisher, transactor)
+	determineWinnerHandler := command.NewDetermineWinnerHandler(bidRepo, compositePublisher, transactor)
+	getHighestHandler := query.NewGetHighestHandler(bidRepo)
+	listBidsHandler := query.NewListBidsHandler(bidRepo)
+
+	consumer := bidNats.NewConsumer(nc, determineWinnerHandler, dbGetter, transactor)
+	if err := consumer.Start(ctx); err != nil {
+		slog.Error("failed to start NATS consumer", "error", err)
+		os.Exit(1)
+	}
+
+	relay := outbox.NewRelay(pgDB, nc, "bid")
+	go relay.Start(ctx)
+
+	svc := application.NewService(
+		placeBidHandler, determineWinnerHandler,
+		getHighestHandler, listBidsHandler,
+	)
+
+	var commands application.CommandUseCase = svc
+	var queries application.QueryUseCase = svc
+
+	handler := bidHTTP.NewHandler(commands, queries)
+
+	mux := server.NewRouter()
+
+	stack := server.Chain(
+		middleware.Recovery(),
+		middleware.Timeout(30*time.Second),
+		middleware.BodyLimit(1<<20),
+		middleware.RequestID(),
+		middleware.AccessLog(),
+		middleware.CORS(config.AppConfig.CORSAllowOrigins),
+		middleware.SecurityHeaders(),
+		middleware.Tracing("bid-service"),
+		middleware.Metrics("bid-service"),
+	)
+
+	mux.Handle("GET /metrics", observability.MetricsHandler())
+
+	healthChecker := health.NewChecker(pgDB, nc).WithBuildInfo(Version, BuildTime, GitCommit)
+	healthChecker.RegisterRoutes(mux)
+
+	handler.RegisterRoutes(mux, stack)
+
+	srv := &http.Server{
+		Addr:         ":" + config.AppConfig.AppPort,
+		Handler:      mux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	go func() {
+		slog.Info("service starting", "port", config.AppConfig.AppPort)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), config.AppConfig.ShutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("server forced to shutdown", "error", err)
+	}
+	consumer.Stop()
+	auctionClient.Close()
+	nc.Drain()
+	pgDB.Close()
+
+	slog.Info("service stopped")
+}
