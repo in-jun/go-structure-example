@@ -255,3 +255,50 @@ func TestAuctionService_GetEvents(t *testing.T) {
 		t.Errorf("expected 0 events, got %d", len(result.Events))
 	}
 }
+
+func TestAuctionService_GetByID_NotFound(t *testing.T) {
+	svc := newTestService(&mockAuctionRepo{auction: nil})
+
+	_, err := svc.GetByID(context.Background(), query.Get{AuctionID: uuid.New().String()})
+	if err == nil {
+		t.Error("expected error for not found auction")
+	}
+}
+
+func TestAuctionService_Open_NotFound(t *testing.T) {
+	svc := newTestService(&mockAuctionRepo{auction: nil})
+
+	err := svc.Open(context.Background(), command.Open{
+		UserID:    uuid.New().String(),
+		AuctionID: uuid.New().String(),
+	})
+	if err == nil {
+		t.Error("expected error for not found auction")
+	}
+}
+
+func TestAuctionService_Close_NotFound(t *testing.T) {
+	svc := newTestService(&mockAuctionRepo{auction: nil})
+
+	err := svc.Close(context.Background(), command.Close{
+		UserID:    uuid.New().String(),
+		AuctionID: uuid.New().String(),
+	})
+	if err == nil {
+		t.Error("expected error for not found auction")
+	}
+}
+
+func TestAuctionService_Create_EndTimeTooShort(t *testing.T) {
+	svc := newTestService(&mockAuctionRepo{})
+
+	_, err := svc.Create(context.Background(), command.Create{
+		UserID:     uuid.New().String(),
+		Title:      "Test",
+		StartPrice: 1000,
+		EndTime:    time.Now().Add(30 * time.Minute),
+	})
+	if err == nil {
+		t.Error("expected error for end time too short")
+	}
+}
