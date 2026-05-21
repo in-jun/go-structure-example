@@ -245,3 +245,42 @@ func TestHandler_Cancel(t *testing.T) {
 		t.Errorf("expected status 204, got %d; body: %s", w.Code, w.Body.String())
 	}
 }
+
+func TestHandler_Open_Conflict(t *testing.T) {
+	cmdMock := &mockCommandUseCase{err: errors.Conflict("Auction is not in draft status")}
+	router := setupRouter(cmdMock, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/auctions/6ba7b810-9dad-11d1-80b4-00c04fd430c8/open", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("expected status 409, got %d", w.Code)
+	}
+}
+
+func TestHandler_Close_Conflict(t *testing.T) {
+	cmdMock := &mockCommandUseCase{err: errors.Conflict("Auction is not open")}
+	router := setupRouter(cmdMock, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/auctions/6ba7b810-9dad-11d1-80b4-00c04fd430c8/close", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("expected status 409, got %d", w.Code)
+	}
+}
+
+func TestHandler_Cancel_Forbidden(t *testing.T) {
+	cmdMock := &mockCommandUseCase{err: errors.Forbidden("Not authorized")}
+	router := setupRouter(cmdMock, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/auctions/6ba7b810-9dad-11d1-80b4-00c04fd430c8/cancel", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected status 403, got %d", w.Code)
+	}
+}
