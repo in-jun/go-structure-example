@@ -3,36 +3,63 @@ package transaction
 import (
 	"context"
 	"database/sql"
+	"errors"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// DBTX abstracts *sql.DB and *sql.Tx so repositories work inside or outside transactions.
 type DBTX interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
+type IsolationLevel int
+
+const (
+	Optimistic  IsolationLevel = iota
+	Pessimistic
+)
+
+type TxOption func(*txConfig)
+
+type txConfig struct {
+	isolation IsolationLevel
+}
+
+func WithIsolation(level IsolationLevel) TxOption {
+	return func(c *txConfig) {
+		c.isolation = level
+	}
+}
+
 type Transactor interface {
-	WithinTransaction(ctx context.Context, fn func(ctx context.Context) error) error
+	WithinTransaction(ctx context.Context, fn func(ctx context.Context) error, opts ...TxOption) error
 }
 
 type txCtxKey struct{}
+type postCommitKey struct{}
 
-type txHolder struct {
-	tx *sql.Tx
+func txFromContext(ctx context.Context) *sql.Tx {
+	tx, ok := ctx.Value(txCtxKey{}).(*sql.Tx)
+	if !ok {
+		return nil
+	}
+	return tx
 }
 
-func txFromContext(ctx context.Context) *txHolder {
-	h, _ := ctx.Value(txCtxKey{}).(*txHolder)
-	return h
+func RegisterPostCommit(ctx context.Context, fn func()) {
+	if hooks, ok := ctx.Value(postCommitKey{}).(*[]func()); ok {
+		*hooks = append(*hooks, fn)
+	} else {
+		fn()
+	}
 }
 
-// NewDBGetter returns a function that resolves the active DBTX from context,
-// falling back to db when no transaction is in progress.
 func NewDBGetter(db *sql.DB) func(ctx context.Context) DBTX {
 	return func(ctx context.Context) DBTX {
-		if h := txFromContext(ctx); h != nil {
-			return h.tx
+		if tx := txFromContext(ctx); tx != nil {
+			return tx
 		}
 		return db
 	}
@@ -46,20 +73,65 @@ func NewTransactor(db *sql.DB) Transactor {
 	return &pgTransactor{db: db}
 }
 
-func (t *pgTransactor) WithinTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+const maxSerializationRetries = 3
+
+func isRetryable(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "40001" || pgErr.Code == "40P01"
+	}
+	return false
+}
+
+func (t *pgTransactor) WithinTransaction(ctx context.Context, fn func(ctx context.Context) error, opts ...TxOption) error {
 	if txFromContext(ctx) != nil {
 		return fn(ctx)
 	}
 
-	tx, err := t.db.BeginTx(ctx, nil)
+	cfg := txConfig{isolation: Optimistic}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	if cfg.isolation == Pessimistic {
+		return t.executeTx(ctx, sql.LevelReadCommitted, fn)
+	}
+
+	var lastErr error
+	for attempt := 0; attempt <= maxSerializationRetries; attempt++ {
+		if attempt > 0 && ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		lastErr = t.executeTx(ctx, sql.LevelSerializable, fn)
+		if lastErr == nil || !isRetryable(lastErr) {
+			return lastErr
+		}
+	}
+	return lastErr
+}
+
+func (t *pgTransactor) executeTx(ctx context.Context, level sql.IsolationLevel, fn func(ctx context.Context) error) error {
+	tx, err := t.db.BeginTx(ctx, &sql.TxOptions{Isolation: level})
 	if err != nil {
 		return err
 	}
-	defer func() { _ = tx.Rollback() }()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
-	txCtx := context.WithValue(ctx, txCtxKey{}, &txHolder{tx: tx})
+	var hooks []func()
+	txCtx := context.WithValue(ctx, txCtxKey{}, tx)
+	txCtx = context.WithValue(txCtx, postCommitKey{}, &hooks)
+
 	if err := fn(txCtx); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	for _, hook := range hooks {
+		hook()
+	}
+	return nil
 }

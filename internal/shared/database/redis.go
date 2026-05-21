@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/in-jun/go-structure-example/internal/shared/config"
 
@@ -11,13 +10,12 @@ import (
 
 func NewRedis() (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", config.AppConfig.RedisHost, config.AppConfig.RedisPort),
-		Password: config.AppConfig.RedisPassword,
+		Addr:     config.AppConfig.RedisURL,
 		DB:       0,
 	})
 
 	if _, err := client.Ping(context.Background()).Result(); err != nil {
-		return nil, fmt.Errorf("failed to connect to redis: %w", err)
+		return nil, err
 	}
 
 	return client, nil

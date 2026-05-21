@@ -31,7 +31,7 @@ func (m *mockHasher) Compare(hashed, plain string) bool    { return hashed == "h
 
 type noopTransactor struct{}
 
-func (n *noopTransactor) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
+func (n *noopTransactor) WithinTransaction(ctx context.Context, fn func(context.Context) error, _ ...transaction.TxOption) error {
 	return fn(ctx)
 }
 

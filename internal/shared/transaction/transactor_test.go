@@ -15,15 +15,15 @@ func TestNewDBGetter_ReturnsFunction(t *testing.T) {
 }
 
 func TestTxFromContext_Empty(t *testing.T) {
-	h := txFromContext(context.Background())
-	if h != nil {
-		t.Error("expected nil holder from empty context")
+	tx := txFromContext(context.Background())
+	if tx != nil {
+		t.Error("expected nil tx from empty context")
 	}
 }
 
 func TestWithinTransaction_NestedReusesExistingTx(t *testing.T) {
-	// Inject a txHolder into context to simulate an active transaction.
-	txCtx := context.WithValue(context.Background(), txCtxKey{}, &txHolder{tx: nil})
+	fakeTx := new(sql.Tx)
+	txCtx := context.WithValue(context.Background(), txCtxKey{}, fakeTx)
 
 	called := 0
 	transactor := &pgTransactor{db: nil}
@@ -47,10 +47,18 @@ func TestNewDBGetter_UsesTxFromContext(t *testing.T) {
 	db := &sql.DB{}
 	getter := NewDBGetter(db)
 
-	txCtx := context.WithValue(context.Background(), txCtxKey{}, &txHolder{tx: nil})
+	fakeTx := new(sql.Tx)
+	txCtx := context.WithValue(context.Background(), txCtxKey{}, fakeTx)
 	result := getter(txCtx)
-	// When a txHolder is in context, DBTX should be the tx (nil here), not the db.
-	if result != (*sql.Tx)(nil) {
+	if result != fakeTx {
 		t.Errorf("expected tx from context, got %v", result)
+	}
+}
+
+func TestRegisterPostCommit_NoTransaction(t *testing.T) {
+	called := false
+	RegisterPostCommit(context.Background(), func() { called = true })
+	if !called {
+		t.Error("expected hook to be called immediately when no transaction is in progress")
 	}
 }

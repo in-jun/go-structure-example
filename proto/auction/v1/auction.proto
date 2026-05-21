@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package auction.v1;
+
+option go_package = "github.com/in-jun/go-structure-example/proto/auction/v1;auctionv1";
+
+service AuctionService {
+  rpc GetAuction(GetAuctionRequest) returns (GetAuctionResponse);
+}
+
+message GetAuctionRequest {
+  string auction_id = 1;
+}
+
+message GetAuctionResponse {
+  string id = 1;
+  string seller_id = 2;
+  int64 start_price = 3;
+  string status = 4;
+}

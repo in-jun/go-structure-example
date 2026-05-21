@@ -17,7 +17,7 @@ const testUUID = "550e8400-e29b-41d4-a716-446655440000"
 
 type noopTransactor struct{}
 
-func (n *noopTransactor) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
+func (n *noopTransactor) WithinTransaction(ctx context.Context, fn func(context.Context) error, _ ...transaction.TxOption) error {
 	return fn(ctx)
 }
 

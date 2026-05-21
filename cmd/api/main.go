@@ -141,7 +141,7 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.RequestID())
-	router.Use(middleware.Timeout(config.AppConfig.RequestTimeout))
+	router.Use(middleware.Timeout(30 * time.Second))
 	router.Use(middleware.BodyLimit(1 << 20)) // 1 MiB
 	router.Use(middleware.SecurityHeaders())
 	router.Use(middleware.AccessLog())

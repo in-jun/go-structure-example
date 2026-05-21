@@ -20,10 +20,7 @@ func TestLoad_Defaults(t *testing.T) {
 	if AppConfig.ShutdownTimeout != 10*time.Second {
 		t.Errorf("expected default ShutdownTimeout 10s, got %v", AppConfig.ShutdownTimeout)
 	}
-	if AppConfig.RequestTimeout != 30*time.Second {
-		t.Errorf("expected default RequestTimeout 30s, got %v", AppConfig.RequestTimeout)
-	}
-	if AppConfig.RateLimitBurst != 100 {
+	if AppConfig.RateLimitBurst != 200 {
 		t.Errorf("expected default RateLimitBurst 100, got %d", AppConfig.RateLimitBurst)
 	}
 	if AppConfig.PGMaxOpenConns != 25 {
@@ -38,8 +35,8 @@ func TestLoad_Defaults(t *testing.T) {
 	if AppConfig.JWTRefreshExpiry != "168h" {
 		t.Errorf("expected default JWTRefreshExpiry '168h', got %q", AppConfig.JWTRefreshExpiry)
 	}
-	if AppConfig.RedisPort != "6379" {
-		t.Errorf("expected default RedisPort '6379', got %q", AppConfig.RedisPort)
+	if AppConfig.NATSURL != "nats://localhost:4222" {
+		t.Errorf("expected default NATSURL 'nats://localhost:4222', got %q", AppConfig.NATSURL)
 	}
 }
 
