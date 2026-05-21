@@ -15,11 +15,13 @@ linters:
   settings:
     gosec:
       excludes:
-        - G114
+        # G108: pprof registered on DefaultServeMux — all cmd/* bind it to "localhost:" only
         - G108
-        - G704
-        - G117
+        # G404: math/rand used for retry jitter and mock payment; not a security context
         - G404
+        # G117/G710: URL built from trusted env vars (APP_PORT, service URLs from config);
+        #            not user-supplied, SSRF flag is a false positive here
+        - G117
         - G710
   exclusions:
     rules:
