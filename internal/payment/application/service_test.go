@@ -200,3 +200,36 @@ func TestPaymentService_GetEvents(t *testing.T) {
 		t.Errorf("expected 0 events, got %d", len(result.Events))
 	}
 }
+
+func TestPaymentService_GetPayment_NotFound(t *testing.T) {
+	svc := newTestService(&mockPaymentRepo{payment: nil})
+
+	_, err := svc.GetPayment(context.Background(), query.GetPayment{PaymentID: uuid.New().String()})
+	if err == nil {
+		t.Error("expected error for not found payment")
+	}
+}
+
+func TestPaymentService_ConfirmPayment_NotFound(t *testing.T) {
+	svc := newTestService(&mockPaymentRepo{payment: nil})
+
+	err := svc.ConfirmPayment(context.Background(), command.ConfirmPayment{
+		UserID:    uuid.New().String(),
+		PaymentID: uuid.New().String(),
+	})
+	if err == nil {
+		t.Error("expected error for not found payment")
+	}
+}
+
+func TestPaymentService_RefundPayment_NotFound(t *testing.T) {
+	svc := newTestService(&mockPaymentRepo{payment: nil})
+
+	err := svc.RefundPayment(context.Background(), command.RefundPayment{
+		UserID:    uuid.New().String(),
+		PaymentID: uuid.New().String(),
+	})
+	if err == nil {
+		t.Error("expected error for not found payment")
+	}
+}
