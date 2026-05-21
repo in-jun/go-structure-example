@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile.gateway
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT:-8080}:8080"
     restart: unless-stopped
     environment:
       APP_PORT: "8080"
@@ -243,8 +243,8 @@ services:
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
     ports:
-      - "16686:16686"
-      - "4318:4318"
+      - "${JAEGER_UI_PORT:-16686}:16686"
+      - "${JAEGER_OTLP_PORT:-4318}:4318"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:14269/ || exit 1"]
@@ -255,7 +255,7 @@ services:
   prometheus:
     image: prom/prometheus:v3.4.0
     ports:
-      - "9091:9090"
+      - "${PROMETHEUS_PORT:-9091}:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
