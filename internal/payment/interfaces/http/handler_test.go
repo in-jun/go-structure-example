@@ -56,6 +56,7 @@ func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *server
 	}
 
 	mux.Handle("GET /api/v1/payments/{id}", noopMw(injectUser(http.HandlerFunc(h.GetPayment))))
+	mux.Handle("GET /api/v1/payments/{id}/events", noopMw(injectUser(http.HandlerFunc(h.GetEvents))))
 	mux.Handle("POST /api/v1/payments/{id}/confirm", noopMw(injectUser(http.HandlerFunc(h.ConfirmPayment))))
 	mux.Handle("POST /api/v1/payments/{id}/refund", noopMw(injectUser(http.HandlerFunc(h.RefundPayment))))
 
@@ -128,5 +129,45 @@ func TestHandler_ConfirmPayment_Error(t *testing.T) {
 
 	if w.Code != http.StatusForbidden {
 		t.Errorf("expected status 403, got %d", w.Code)
+	}
+}
+
+func TestHandler_RefundPayment(t *testing.T) {
+	router := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/payments/"+testPaymentID+"/refund", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected status 204, got %d; body: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandler_RefundPayment_NotOwner(t *testing.T) {
+	cmdMock := &mockCommandUseCase{
+		err: errors.Forbidden("Not authorized"),
+	}
+
+	router := setupRouter(cmdMock, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/payments/"+testPaymentID+"/refund", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected status 403, got %d", w.Code)
+	}
+}
+
+func TestHandler_GetEvents(t *testing.T) {
+	router := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("GET", "/api/v1/payments/"+testPaymentID+"/events", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Code)
 	}
 }
