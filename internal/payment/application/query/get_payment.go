@@ -11,6 +11,7 @@ import (
 
 type GetPayment struct {
 	PaymentID string
+	UserID    string
 }
 
 type Result struct {
@@ -43,6 +44,9 @@ func (h *GetPaymentHandler) Handle(ctx context.Context, qry GetPayment) (*Result
 	}
 	if payment == nil {
 		return nil, errors.NotFound("Payment not found")
+	}
+	if qry.UserID != "" && !payment.IsOwnedBy(qry.UserID) {
+		return nil, errors.Forbidden("Not authorized")
 	}
 
 	return &Result{

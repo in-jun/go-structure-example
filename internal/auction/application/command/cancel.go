@@ -10,6 +10,7 @@ import (
 )
 
 type Cancel struct {
+	UserID    string // empty = system-initiated (NATS), non-empty = user-initiated (requires ownership)
 	AuctionID string
 }
 
@@ -31,6 +32,9 @@ func (h *CancelHandler) Handle(ctx context.Context, cmd Cancel) error {
 		}
 		if auction == nil {
 			return errors.NotFound("Auction not found")
+		}
+		if cmd.UserID != "" && !auction.IsOwnedBy(cmd.UserID) {
+			return errors.Forbidden("Not authorized")
 		}
 
 		if err := auction.Cancel(); err != nil {

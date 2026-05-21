@@ -141,8 +141,10 @@ func (h *Handler) Close(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	userID := server.UserID(r)
 
 	if err := h.commands.Cancel(r.Context(), command.Cancel{
+		UserID:    userID,
 		AuctionID: id,
 	}); err != nil {
 		middleware.HandleError(w, err)

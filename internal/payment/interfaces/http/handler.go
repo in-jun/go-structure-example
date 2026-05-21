@@ -37,14 +37,10 @@ func (h *Handler) GetPayment(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.queries.GetPayment(r.Context(), query.GetPayment{
 		PaymentID: id,
+		UserID:    userID,
 	})
 	if err != nil {
 		middleware.HandleError(w, err)
-		return
-	}
-
-	if result.WinnerID != userID {
-		middleware.HandleError(w, errors.Forbidden("Not authorized"))
 		return
 	}
 

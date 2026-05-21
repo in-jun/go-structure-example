@@ -60,13 +60,15 @@ func ReconstructPayment(id, auctionID, winnerID string, amount int64, status str
 	}
 }
 
-func (p *Payment) ID() string          { return p.id }
-func (p *Payment) AuctionID() string   { return p.auctionID }
-func (p *Payment) WinnerID() string    { return p.winnerID }
-func (p *Payment) Amount() int64       { return p.amount }
-func (p *Payment) Status() string      { return p.status }
+func (p *Payment) ID() string           { return p.id }
+func (p *Payment) AuctionID() string    { return p.auctionID }
+func (p *Payment) WinnerID() string     { return p.winnerID }
+func (p *Payment) Amount() int64        { return p.amount }
+func (p *Payment) Status() string       { return p.status }
 func (p *Payment) CreatedAt() time.Time { return p.createdAt }
 func (p *Payment) UpdatedAt() time.Time { return p.updatedAt }
+
+func (p *Payment) IsOwnedBy(userID string) bool { return p.winnerID == userID }
 
 func (p *Payment) Complete() error {
 	if p.status != StatusPending {
@@ -97,8 +99,6 @@ func (p *Payment) Refund(reason string) error {
 	p.record(event.NewPaymentRefunded(p.id, p.auctionID, p.winnerID, p.amount, reason))
 	return nil
 }
-
-func (p *Payment) IsOwnedBy(userID string) bool { return p.winnerID == userID }
 
 func (p *Payment) Events() []event.Event { return p.events }
 func (p *Payment) ClearEvents()          { p.events = nil }
