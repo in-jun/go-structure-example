@@ -180,7 +180,7 @@ func TestResponseWriter(t *testing.T) {
 	rw := NewResponseWriter(w)
 
 	rw.WriteHeader(http.StatusNotFound)
-	_, _ = rw.Write([]byte("not found"))
+	rw.Write([]byte("not found"))
 
 	if rw.StatusCode != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", rw.StatusCode)
