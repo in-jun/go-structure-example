@@ -42,7 +42,7 @@ var AppConfig Config
 func Load() {
 	AppConfig = Config{
 		AppPort:            getEnv("APP_PORT", "8080"),
-		JWTSecret:          requireEnv("JWT_SECRET"),
+		JWTSecret:          getEnv("JWT_SECRET", ""),
 		JWTAccessExpiry:    getEnv("JWT_ACCESS_EXPIRY", "15m"),
 		JWTRefreshExpiry:   getEnv("JWT_REFRESH_EXPIRY", "168h"),
 		RedisURL:           getEnv("REDIS_URL", "localhost:6379"),

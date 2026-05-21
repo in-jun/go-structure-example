@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"time"
 
 	"github.com/in-jun/go-structure-example/internal/bid/domain"
 	"github.com/in-jun/go-structure-example/internal/bid/domain/entity"
@@ -23,6 +24,7 @@ type PlaceBidResult struct {
 	AuctionID string
 	BidderID  string
 	Amount    int64
+	CreatedAt time.Time
 }
 
 type PlaceBidHandler struct {
@@ -98,6 +100,7 @@ func (h *PlaceBidHandler) Handle(ctx context.Context, cmd PlaceBid) (*PlaceBidRe
 		result = &PlaceBidResult{
 			ID: bid.ID(), AuctionID: bid.AuctionID(),
 			BidderID: bid.BidderID(), Amount: bid.Amount(),
+			CreatedAt: bid.CreatedAt(),
 		}
 		return nil
 	})

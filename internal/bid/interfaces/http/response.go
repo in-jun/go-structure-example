@@ -27,6 +27,7 @@ func toPlaceBidResponse(r *command.PlaceBidResult) *Response {
 		AuctionID: r.AuctionID,
 		BidderID:  r.BidderID,
 		Amount:    r.Amount,
+		CreatedAt: r.CreatedAt,
 	}
 }
 
