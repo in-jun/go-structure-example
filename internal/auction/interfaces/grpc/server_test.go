@@ -63,15 +63,6 @@ func TestToGRPCError_Internal(t *testing.T) {
 	}
 }
 
-type mockQueryUseCase struct {
-	result interface{}
-	err    error
-}
-
-func (m *mockQueryUseCase) GetByID(ctx context.Context, qry interface{}) (interface{}, error) {
-	return m.result, m.err
-}
-
 func TestRecoveryInterceptor_NoPanic(t *testing.T) {
 	interceptor := recoveryInterceptor()
 	handler := func(ctx context.Context, req any) (any, error) {
