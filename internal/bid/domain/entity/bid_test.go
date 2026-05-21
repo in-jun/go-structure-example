@@ -40,15 +40,18 @@ func TestNewBid_Invariants(t *testing.T) {
 		name      string
 		auctionID string
 		bidderID  string
+		amount    int64
 	}{
-		{"empty auctionID", "", testBidderID},
-		{"empty bidderID", testAuctionID, ""},
-		{"both empty", "", ""},
+		{"empty auctionID", "", testBidderID, 1000},
+		{"empty bidderID", testAuctionID, "", 1000},
+		{"both empty", "", "", 1000},
+		{"zero amount", testAuctionID, testBidderID, 0},
+		{"negative amount", testAuctionID, testBidderID, -500},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewBid(tt.auctionID, tt.bidderID, 1000)
+			_, err := NewBid(tt.auctionID, tt.bidderID, tt.amount)
 			if err == nil {
 				t.Errorf("expected error for %s", tt.name)
 			}
