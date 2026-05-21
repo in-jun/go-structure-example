@@ -289,6 +289,43 @@ func TestAuctionService_Close_NotFound(t *testing.T) {
 	}
 }
 
+func TestAuctionService_Close_NotOwner(t *testing.T) {
+	ownerID := uuid.New().String()
+	otherID := uuid.New().String()
+	auction, _ := entity.NewAuction(ownerID, "Test", "", 100, time.Now().Add(2*time.Hour))
+	if err := auction.Open(); err != nil {
+		t.Fatal(err)
+	}
+	auction.ClearEvents()
+	svc := newTestService(&mockAuctionRepo{auction: auction})
+
+	err := svc.Close(context.Background(), command.Close{
+		UserID:    otherID,
+		AuctionID: auction.ID(),
+	})
+	if err == nil {
+		t.Error("expected error for non-owner close attempt")
+	}
+}
+
+func TestAuctionService_Settle_NotFound(t *testing.T) {
+	svc := newTestService(&mockAuctionRepo{auction: nil})
+
+	err := svc.Settle(context.Background(), command.Settle{AuctionID: uuid.New().String()})
+	if err == nil {
+		t.Error("expected error for not found auction")
+	}
+}
+
+func TestAuctionService_Cancel_NotFound(t *testing.T) {
+	svc := newTestService(&mockAuctionRepo{auction: nil})
+
+	err := svc.Cancel(context.Background(), command.Cancel{AuctionID: uuid.New().String()})
+	if err == nil {
+		t.Error("expected error for not found auction")
+	}
+}
+
 func TestAuctionService_Create_EndTimeTooShort(t *testing.T) {
 	svc := newTestService(&mockAuctionRepo{})
 
