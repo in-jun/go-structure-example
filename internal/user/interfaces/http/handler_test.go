@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
+	"github.com/in-jun/go-structure-example/internal/shared/server"
 	"github.com/in-jun/go-structure-example/internal/user/application"
 	"github.com/in-jun/go-structure-example/internal/user/application/command"
 	"github.com/in-jun/go-structure-example/internal/user/application/query"
@@ -43,19 +43,15 @@ func (m *mockQueryUseCase) GetProfile(_ context.Context, _ query.Get) (*query.Re
 var _ application.CommandUseCase = (*mockCommandUseCase)(nil)
 var _ application.QueryUseCase = (*mockQueryUseCase)(nil)
 
-func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *gin.Engine {
-	gin.SetMode(gin.TestMode)
-	r := gin.New()
-	r.Use(middleware.ErrorHandler())
-
+func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *server.Router {
 	tokenValidator := middleware.TokenValidator(func(ctx context.Context, token string) (*middleware.ValidateTokenResult, error) {
 		return &middleware.ValidateTokenResult{UserID: testUUID, JTI: "test-jti"}, nil
 	})
 
 	h := NewHandler(cmdMock, qryMock, tokenValidator)
-	api := r.Group("/api/v1")
-	h.RegisterRoutes(api)
-	return r
+	mux := server.NewRouter()
+	h.RegisterRoutes(mux, server.Chain())
+	return mux
 }
 
 func TestHandler_GetMe(t *testing.T) {
@@ -67,12 +63,12 @@ func TestHandler_GetMe(t *testing.T) {
 			CreatedAt: time.Now(),
 		},
 	}
-	r := setupRouter(&mockCommandUseCase{}, qryMock)
+	mux := setupRouter(&mockCommandUseCase{}, qryMock)
 	req := httptest.NewRequest("GET", "/api/v1/users/me", nil)
 	req.Header.Set("Authorization", "Bearer valid-token")
 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d; body: %s", w.Code, w.Body.String())
@@ -86,12 +82,12 @@ func TestHandler_GetMe(t *testing.T) {
 }
 
 func TestHandler_GetMe_NotFound(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{err: errors.NotFound("user not found")})
+	mux := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{err: errors.NotFound("user not found")})
 	req := httptest.NewRequest("GET", "/api/v1/users/me", nil)
 	req.Header.Set("Authorization", "Bearer valid-token")
 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", w.Code)
@@ -99,14 +95,14 @@ func TestHandler_GetMe_NotFound(t *testing.T) {
 }
 
 func TestHandler_UpdateProfile(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	mux := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	body, _ := json.Marshal(UpdateProfileRequest{Name: "New Name"})
 	req := httptest.NewRequest("PATCH", "/api/v1/users/me/profile", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer valid-token")
 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d; body: %s", w.Code, w.Body.String())
@@ -114,14 +110,14 @@ func TestHandler_UpdateProfile(t *testing.T) {
 }
 
 func TestHandler_UpdatePassword(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	mux := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	body, _ := json.Marshal(UpdatePasswordRequest{CurrentPassword: "old", NewPassword: "newpass"})
 	req := httptest.NewRequest("PATCH", "/api/v1/users/me/password", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer valid-token")
 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d; body: %s", w.Code, w.Body.String())
@@ -129,14 +125,14 @@ func TestHandler_UpdatePassword(t *testing.T) {
 }
 
 func TestHandler_UpdatePassword_Error(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{err: errors.Unauthorized("wrong password")}, &mockQueryUseCase{})
+	mux := setupRouter(&mockCommandUseCase{err: errors.Unauthorized("wrong password")}, &mockQueryUseCase{})
 	body, _ := json.Marshal(UpdatePasswordRequest{CurrentPassword: "wrong", NewPassword: "newpass"})
 	req := httptest.NewRequest("PATCH", "/api/v1/users/me/password", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer valid-token")
 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected 401, got %d", w.Code)
@@ -144,12 +140,12 @@ func TestHandler_UpdatePassword_Error(t *testing.T) {
 }
 
 func TestHandler_DeleteMe(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	mux := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	req := httptest.NewRequest("DELETE", "/api/v1/users/me", nil)
 	req.Header.Set("Authorization", "Bearer valid-token")
 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d; body: %s", w.Code, w.Body.String())
@@ -157,13 +153,13 @@ func TestHandler_DeleteMe(t *testing.T) {
 }
 
 func TestHandler_UpdateProfile_BadJSON(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	mux := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	req := httptest.NewRequest("PATCH", "/api/v1/users/me/profile", bytes.NewReader([]byte("{invalid}")))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer valid-token")
 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", w.Code)
@@ -171,13 +167,13 @@ func TestHandler_UpdateProfile_BadJSON(t *testing.T) {
 }
 
 func TestHandler_UpdatePassword_BadJSON(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	mux := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	req := httptest.NewRequest("PATCH", "/api/v1/users/me/password", bytes.NewReader([]byte("{invalid}")))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer valid-token")
 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", w.Code)
@@ -185,11 +181,11 @@ func TestHandler_UpdatePassword_BadJSON(t *testing.T) {
 }
 
 func TestHandler_MissingAuth(t *testing.T) {
-	r := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	mux := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	req := httptest.NewRequest("GET", "/api/v1/users/me", nil)
 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected 401, got %d", w.Code)

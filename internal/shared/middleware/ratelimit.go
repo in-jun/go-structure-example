@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	"github.com/in-jun/go-structure-example/internal/shared/server"
 )
 
 var rateLimitScript = redis.NewScript(`
@@ -23,25 +23,27 @@ end
 return 1
 `)
 
-func RateLimit(client *redis.Client, burst int) gin.HandlerFunc {
+func RateLimit(redisClient *redis.Client, rps float64, burst int) func(http.Handler) http.Handler {
 	windowMs := int(time.Second / time.Millisecond)
 
-	return func(c *gin.Context) {
-		ip := c.ClientIP()
-		now := time.Now().Unix()
-		key := fmt.Sprintf("ratelimit:%s:%d", ip, now)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip := server.ClientIP(r)
+			now := time.Now().Unix()
+			key := fmt.Sprintf("ratelimit:%s:%d", ip, now)
 
-		allowed, err := rateLimitScript.Run(c.Request.Context(), client, []string{key}, burst, windowMs).Int()
-		if err != nil {
-			c.Next()
-			return
-		}
+			allowed, err := rateLimitScript.Run(r.Context(), redisClient, []string{key}, burst, windowMs).Int()
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		if allowed == 0 {
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"message": "Too many requests"})
-			return
-		}
+			if allowed == 0 {
+				server.Error(w, http.StatusTooManyRequests, "Too Many Requests")
+				return
+			}
 
-		c.Next()
+			next.ServeHTTP(w, r)
+		})
 	}
 }

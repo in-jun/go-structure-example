@@ -9,8 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
 	authapp "github.com/in-jun/go-structure-example/internal/auth/application"
 	authcmd "github.com/in-jun/go-structure-example/internal/auth/application/command"
 	authqry "github.com/in-jun/go-structure-example/internal/auth/application/query"
@@ -24,6 +22,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/health"
 	"github.com/in-jun/go-structure-example/internal/shared/logging"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
+	"github.com/in-jun/go-structure-example/internal/shared/server"
 	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 	todoapp "github.com/in-jun/go-structure-example/internal/todo/application"
 	todocmd "github.com/in-jun/go-structure-example/internal/todo/application/command"
@@ -137,30 +136,29 @@ func main() {
 	userHandler := userhttp.NewHandler(userCommands, userQueries, validateToken)
 	todoHandler := todohttp.NewHandler(todoCommands, todoQueries, validateToken)
 
+	mux := server.NewRouter()
+
+	stack := server.Chain(
+		middleware.Recovery(),
+		middleware.RequestID(),
+		middleware.Timeout(30*time.Second),
+		middleware.BodyLimit(1<<20),
+		middleware.SecurityHeaders(),
+		middleware.AccessLog(),
+		middleware.CORS(config.AppConfig.CORSAllowOrigins),
+		middleware.RateLimit(redisClient, config.AppConfig.RateLimitRPS, config.AppConfig.RateLimitBurst),
+	)
+
 	healthChecker := health.NewChecker(db).WithRedis(redisClient).WithBuildInfo(Version, BuildTime, GitCommit)
-	router := gin.New()
-	router.Use(gin.Recovery())
-	router.Use(middleware.RequestID())
-	router.Use(middleware.Timeout(30 * time.Second))
-	router.Use(middleware.BodyLimit(1 << 20)) // 1 MiB
-	router.Use(middleware.SecurityHeaders())
-	router.Use(middleware.AccessLog())
-	router.Use(middleware.CORS(config.AppConfig.CORSAllowOrigins))
-	router.Use(middleware.RateLimit(redisClient, config.AppConfig.RateLimitBurst))
-	router.Use(middleware.ErrorHandler())
+	healthChecker.RegisterRoutes(mux)
 
-	healthChecker.RegisterRoutes(router)
-
-	api := router.Group("/api/v1")
-	{
-		authHandler.RegisterRoutes(api)
-		userHandler.RegisterRoutes(api)
-		todoHandler.RegisterRoutes(api)
-	}
+	authHandler.RegisterRoutes(mux, stack)
+	userHandler.RegisterRoutes(mux, stack)
+	todoHandler.RegisterRoutes(mux, stack)
 
 	srv := &http.Server{
 		Addr:         ":" + config.AppConfig.AppPort,
-		Handler:      router,
+		Handler:      mux,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,

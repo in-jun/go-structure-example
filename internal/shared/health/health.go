@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	goredis "github.com/go-redis/redis/v8"
+	"github.com/in-jun/go-structure-example/internal/shared/server"
 )
 
 type Checker struct {
@@ -34,27 +34,27 @@ func (c *Checker) WithBuildInfo(version, buildTime, gitCommit string) *Checker {
 	return c
 }
 
-func (c *Checker) RegisterRoutes(r *gin.Engine) {
-	r.GET("/health/live", c.liveHandler)
-	r.GET("/health/ready", c.readyHandler)
+func (c *Checker) RegisterRoutes(mux *server.Router) {
+	mux.HandleFunc("GET /health/live", c.liveHandler)
+	mux.HandleFunc("GET /health/ready", c.readyHandler)
 }
 
-func (c *Checker) liveHandler(ctx *gin.Context) {
-	resp := gin.H{"status": "ok"}
+func (c *Checker) liveHandler(w http.ResponseWriter, r *http.Request) {
+	resp := map[string]any{"status": "ok"}
 	if c.version != "" {
 		resp["version"] = c.version
 		resp["build_time"] = c.buildTime
 		resp["git_commit"] = c.gitCommit
 	}
-	ctx.JSON(http.StatusOK, resp)
+	server.JSON(w, http.StatusOK, resp)
 }
 
-func (c *Checker) readyHandler(ctx *gin.Context) {
+func (c *Checker) readyHandler(w http.ResponseWriter, r *http.Request) {
 	checks := map[string]any{}
 	ready := true
 
 	if c.db != nil {
-		tctx, cancel := context.WithTimeout(ctx.Request.Context(), 2*time.Second)
+		tctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
 		if err := c.db.PingContext(tctx); err != nil {
 			checks["postgres"] = "unhealthy: " + err.Error()
@@ -65,7 +65,7 @@ func (c *Checker) readyHandler(ctx *gin.Context) {
 	}
 
 	if c.redis != nil {
-		tctx, cancel := context.WithTimeout(ctx.Request.Context(), 2*time.Second)
+		tctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
 		if err := c.redis.Ping(tctx).Err(); err != nil {
 			checks["redis"] = "unhealthy: " + err.Error()
@@ -76,8 +76,10 @@ func (c *Checker) readyHandler(ctx *gin.Context) {
 	}
 
 	status := http.StatusOK
+	statusStr := "ok"
 	if !ready {
 		status = http.StatusServiceUnavailable
+		statusStr = "degraded"
 	}
-	ctx.JSON(status, gin.H{"status": map[bool]string{true: "ok", false: "degraded"}[ready], "checks": checks})
+	server.JSON(w, status, map[string]any{"status": statusStr, "checks": checks})
 }

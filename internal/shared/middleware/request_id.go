@@ -1,27 +1,22 @@
 package middleware
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/in-jun/go-structure-example/internal/shared/logging"
 )
 
-const headerRequestID = "X-Request-ID"
-
-func RequestID() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id := c.GetHeader(headerRequestID)
-		if id == "" {
-			b := make([]byte, 8)
-			if _, err := rand.Read(b); err == nil {
-				id = hex.EncodeToString(b)
+func RequestID() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			id := r.Header.Get("X-Request-ID")
+			if id == "" {
+				id = uuid.New().String()
 			}
-		}
-		c.Header(headerRequestID, id)
-		ctx := logging.WithRequestID(c.Request.Context(), id)
-		c.Request = c.Request.WithContext(ctx)
-		c.Next()
+			w.Header().Set("X-Request-ID", id)
+			ctx := logging.WithRequestID(r.Context(), id)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }

@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
+	"github.com/in-jun/go-structure-example/internal/shared/server"
 	"github.com/in-jun/go-structure-example/internal/todo/application"
 	"github.com/in-jun/go-structure-example/internal/todo/application/command"
 	"github.com/in-jun/go-structure-example/internal/todo/application/query"
@@ -23,44 +23,42 @@ func NewHandler(commands application.CommandUseCase, queries application.QueryUs
 	return &Handler{commands: commands, queries: queries, validateToken: validateToken}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
-	todos := r.Group("/todos")
-	todos.Use(middleware.Auth(h.validateToken))
-	{
-		todos.GET("", h.GetList)
-		todos.POST("", h.Create)
-		todos.GET("/:id", h.Get)
-		todos.PUT("/:id", h.Update)
-		todos.PATCH("/:id/status", h.UpdateStatus)
-		todos.DELETE("/:id", h.Delete)
-	}
+func (h *Handler) RegisterRoutes(mux *server.Router, mw server.Middleware) {
+	authMw := middleware.Auth(h.validateToken)
+
+	mux.Handle("GET /api/v1/todos", mw(authMw(http.HandlerFunc(h.GetList))))
+	mux.Handle("POST /api/v1/todos", mw(authMw(http.HandlerFunc(h.Create))))
+	mux.Handle("GET /api/v1/todos/{id}", mw(authMw(http.HandlerFunc(h.Get))))
+	mux.Handle("PUT /api/v1/todos/{id}", mw(authMw(http.HandlerFunc(h.Update))))
+	mux.Handle("PATCH /api/v1/todos/{id}/status", mw(authMw(http.HandlerFunc(h.UpdateStatus))))
+	mux.Handle("DELETE /api/v1/todos/{id}", mw(authMw(http.HandlerFunc(h.Delete))))
 }
 
-func (h *Handler) Create(c *gin.Context) {
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateTodoRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+	if err := server.Bind(r, &req); err != nil {
+		middleware.HandleError(w, errors.BadRequest("Invalid request format"))
 		return
 	}
 
-	userID := c.GetString("user_id")
-	result, err := h.commands.Create(c.Request.Context(), command.Create{
+	userID := server.UserID(r)
+	result, err := h.commands.Create(r.Context(), command.Create{
 		UserID:      userID,
 		Title:       req.Title,
 		Description: req.Description,
 		DueDate:     req.DueDate,
 	})
 	if err != nil {
-		c.Error(err)
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"id": result.ID})
+	server.JSON(w, http.StatusCreated, map[string]string{"id": result.ID})
 }
 
-func (h *Handler) GetList(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(server.QueryDefault(r, "page", "1"))
+	limit, _ := strconv.Atoi(server.QueryDefault(r, "limit", "20"))
 	if page < 1 {
 		page = 1
 	}
@@ -69,93 +67,93 @@ func (h *Handler) GetList(c *gin.Context) {
 	} else if limit > 100 {
 		limit = 100
 	}
-	userID := c.GetString("user_id")
+	userID := server.UserID(r)
 
-	result, err := h.queries.GetList(c.Request.Context(), query.List{
+	result, err := h.queries.GetList(r.Context(), query.List{
 		UserID: userID,
 		Page:   page,
 		Limit:  limit,
 	})
 	if err != nil {
-		c.Error(err)
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, toTodoListResponse(result))
+	server.JSON(w, http.StatusOK, toTodoListResponse(result))
 }
 
-func (h *Handler) Get(c *gin.Context) {
-	id := c.Param("id")
-	userID := c.GetString("user_id")
-	result, err := h.queries.Get(c.Request.Context(), query.Get{
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	id := server.PathParam(r, "id")
+	userID := server.UserID(r)
+	result, err := h.queries.Get(r.Context(), query.Get{
 		UserID: userID,
 		TodoID: id,
 	})
 	if err != nil {
-		c.Error(err)
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, toTodoResponse(result))
+	server.JSON(w, http.StatusOK, toTodoResponse(result))
 }
 
-func (h *Handler) Update(c *gin.Context) {
-	id := c.Param("id")
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	id := server.PathParam(r, "id")
 
 	var req UpdateTodoRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+	if err := server.Bind(r, &req); err != nil {
+		middleware.HandleError(w, errors.BadRequest("Invalid request format"))
 		return
 	}
 
-	userID := c.GetString("user_id")
-	if err := h.commands.Update(c.Request.Context(), command.Update{
+	userID := server.UserID(r)
+	if err := h.commands.Update(r.Context(), command.Update{
 		UserID:      userID,
 		TodoID:      id,
 		Title:       req.Title,
 		Description: req.Description,
 		DueDate:     req.DueDate,
 	}); err != nil {
-		c.Error(err)
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) UpdateStatus(c *gin.Context) {
-	id := c.Param("id")
+func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
+	id := server.PathParam(r, "id")
 
 	var req UpdateTodoStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+	if err := server.Bind(r, &req); err != nil {
+		middleware.HandleError(w, errors.BadRequest("Invalid request format"))
 		return
 	}
 
-	userID := c.GetString("user_id")
-	if err := h.commands.UpdateStatus(c.Request.Context(), command.UpdateStatus{
+	userID := server.UserID(r)
+	if err := h.commands.UpdateStatus(r.Context(), command.UpdateStatus{
 		UserID: userID,
 		TodoID: id,
 		Status: entity.Status(req.Status),
 	}); err != nil {
-		c.Error(err)
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) Delete(c *gin.Context) {
-	id := c.Param("id")
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	id := server.PathParam(r, "id")
 
-	userID := c.GetString("user_id")
-	if err := h.commands.Delete(c.Request.Context(), command.Delete{
+	userID := server.UserID(r)
+	if err := h.commands.Delete(r.Context(), command.Delete{
 		UserID: userID,
 		TodoID: id,
 	}); err != nil {
-		c.Error(err)
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }

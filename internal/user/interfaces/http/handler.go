@@ -3,9 +3,9 @@ package http
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/shared/middleware"
+	"github.com/in-jun/go-structure-example/internal/shared/server"
 	"github.com/in-jun/go-structure-example/internal/user/application"
 	"github.com/in-jun/go-structure-example/internal/user/application/command"
 	"github.com/in-jun/go-structure-example/internal/user/application/query"
@@ -21,74 +21,72 @@ func NewHandler(commands application.CommandUseCase, queries application.QueryUs
 	return &Handler{commands: commands, queries: queries, validateToken: validateToken}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
-	users := r.Group("/users")
-	users.Use(middleware.Auth(h.validateToken))
-	{
-		users.GET("/me", h.GetMe)
-		users.PATCH("/me/profile", h.UpdateProfile)
-		users.PATCH("/me/password", h.UpdatePassword)
-		users.DELETE("/me", h.DeleteMe)
-	}
+func (h *Handler) RegisterRoutes(mux *server.Router, mw server.Middleware) {
+	authMw := middleware.Auth(h.validateToken)
+
+	mux.Handle("GET /api/v1/users/me", mw(authMw(http.HandlerFunc(h.GetMe))))
+	mux.Handle("PATCH /api/v1/users/me/profile", mw(authMw(http.HandlerFunc(h.UpdateProfile))))
+	mux.Handle("PATCH /api/v1/users/me/password", mw(authMw(http.HandlerFunc(h.UpdatePassword))))
+	mux.Handle("DELETE /api/v1/users/me", mw(authMw(http.HandlerFunc(h.DeleteMe))))
 }
 
-func (h *Handler) GetMe(c *gin.Context) {
-	userID := c.GetString("user_id")
+func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
+	userID := server.UserID(r)
 
-	result, err := h.queries.GetProfile(c.Request.Context(), query.Get{UserID: userID})
+	result, err := h.queries.GetProfile(r.Context(), query.Get{UserID: userID})
 	if err != nil {
-		c.Error(err)
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, toUserResponse(result))
+	server.JSON(w, http.StatusOK, toUserResponse(result))
 }
 
-func (h *Handler) UpdateProfile(c *gin.Context) {
+func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	var req UpdateProfileRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+	if err := server.Bind(r, &req); err != nil {
+		middleware.HandleError(w, errors.BadRequest("Invalid request format"))
 		return
 	}
 
-	userID := c.GetString("user_id")
-	if err := h.commands.UpdateProfile(c.Request.Context(), command.UpdateProfile{
+	userID := server.UserID(r)
+	if err := h.commands.UpdateProfile(r.Context(), command.UpdateProfile{
 		UserID: userID,
 		Name:   req.Name,
 	}); err != nil {
-		c.Error(err)
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{Message: "Profile updated successfully"})
+	server.JSON(w, http.StatusOK, MessageResponse{Message: "Profile updated successfully"})
 }
 
-func (h *Handler) UpdatePassword(c *gin.Context) {
+func (h *Handler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	var req UpdatePasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(errors.BadRequest("Invalid request format"))
+	if err := server.Bind(r, &req); err != nil {
+		middleware.HandleError(w, errors.BadRequest("Invalid request format"))
 		return
 	}
 
-	userID := c.GetString("user_id")
-	if err := h.commands.UpdatePassword(c.Request.Context(), command.UpdatePassword{
+	userID := server.UserID(r)
+	if err := h.commands.UpdatePassword(r.Context(), command.UpdatePassword{
 		UserID:          userID,
 		CurrentPassword: req.CurrentPassword,
 		NewPassword:     req.NewPassword,
 	}); err != nil {
-		c.Error(err)
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{Message: "Password updated successfully"})
+	server.JSON(w, http.StatusOK, MessageResponse{Message: "Password updated successfully"})
 }
 
-func (h *Handler) DeleteMe(c *gin.Context) {
-	userID := c.GetString("user_id")
-	if err := h.commands.Delete(c.Request.Context(), command.Delete{UserID: userID}); err != nil {
-		c.Error(err)
+func (h *Handler) DeleteMe(w http.ResponseWriter, r *http.Request) {
+	userID := server.UserID(r)
+	if err := h.commands.Delete(r.Context(), command.Delete{UserID: userID}); err != nil {
+		middleware.HandleError(w, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{Message: "Account deleted successfully"})
+	server.JSON(w, http.StatusOK, MessageResponse{Message: "Account deleted successfully"})
 }
