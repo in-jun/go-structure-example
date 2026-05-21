@@ -66,6 +66,8 @@ func NewDBGetter(db *sql.DB) func(ctx context.Context) DBTX {
 	}
 }
 
+var _ Transactor = (*pgTransactor)(nil)
+
 type pgTransactor struct {
 	db *sql.DB
 }

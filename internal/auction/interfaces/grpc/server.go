@@ -21,6 +21,8 @@ import (
 	auctionv1 "github.com/in-jun/go-structure-example/proto/auction/v1"
 )
 
+var _ auctionv1.AuctionServiceServer = (*server)(nil)
+
 type server struct {
 	auctionv1.UnimplementedAuctionServiceServer
 	queries application.QueryUseCase
