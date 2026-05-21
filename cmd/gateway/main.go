@@ -157,10 +157,10 @@ func main() {
 		}, nil
 	})
 
-	authSvc := newServiceProxy("auth", "http://auth:8081", 5*time.Second, 2)
-	auctionSvc := newServiceProxy("auction", "http://auction:8082", 10*time.Second, 3)
-	bidSvc := newServiceProxy("bid", "http://bid:8083", 10*time.Second, 3)
-	paymentSvc := newServiceProxy("payment", "http://payment:8084", 30*time.Second, 2)
+	authSvc := newServiceProxy("auth", config.AppConfig.AuthServiceURL, 5*time.Second, 2)
+	auctionSvc := newServiceProxy("auction", config.AppConfig.AuctionServiceURL, 10*time.Second, 3)
+	bidSvc := newServiceProxy("bid", config.AppConfig.BidServiceURL, 10*time.Second, 3)
+	paymentSvc := newServiceProxy("payment", config.AppConfig.PaymentServiceURL, 30*time.Second, 2)
 
 	mux := server.NewRouter()
 

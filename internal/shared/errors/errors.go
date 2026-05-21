@@ -23,6 +23,16 @@ func (e CustomError) Is(target error) bool {
 	return e.Status == t.Status
 }
 
+var (
+	ErrBadRequest      = CustomError{Status: http.StatusBadRequest, Code: "BAD_REQUEST"}
+	ErrUnauthorized    = CustomError{Status: http.StatusUnauthorized, Code: "UNAUTHORIZED"}
+	ErrForbidden       = CustomError{Status: http.StatusForbidden, Code: "FORBIDDEN"}
+	ErrNotFound        = CustomError{Status: http.StatusNotFound, Code: "NOT_FOUND"}
+	ErrConflict        = CustomError{Status: http.StatusConflict, Code: "CONFLICT"}
+	ErrTooManyRequests = CustomError{Status: http.StatusTooManyRequests, Code: "RATE_LIMIT_EXCEEDED"}
+	ErrInternal        = CustomError{Status: http.StatusInternalServerError, Code: "INTERNAL_ERROR"}
+)
+
 func BadRequest(message string) CustomError {
 	return CustomError{Status: http.StatusBadRequest, Code: "BAD_REQUEST", Message: message}
 }

@@ -17,6 +17,8 @@ import (
 	auctionv1 "github.com/in-jun/go-structure-example/proto/auction/v1"
 )
 
+var _ domain.AuctionClient = (*AuctionClient)(nil)
+
 type AuctionClient struct {
 	client auctionv1.AuctionServiceClient
 	conn   *grpc.ClientConn

@@ -13,6 +13,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
+var _ domain.AuctionRepository = (*auctionRepository)(nil)
+
 type auctionRepository struct {
 	dbGetter func(ctx context.Context) transaction.DBTX
 }

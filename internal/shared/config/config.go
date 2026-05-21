@@ -23,6 +23,9 @@ type Config struct {
 	AuctionServiceURL  string
 	AuctionGRPCAddress string
 	GRPCPort           string
+	AuthServiceURL     string
+	BidServiceURL      string
+	PaymentServiceURL  string
 	PGSSLMode          string
 	PGMaxOpenConns     int
 	PGMaxIdleConns     int
@@ -53,6 +56,9 @@ func Load() {
 		AuctionServiceURL:  getEnv("AUCTION_SERVICE_URL", "http://localhost:8082"),
 		AuctionGRPCAddress: getEnv("AUCTION_GRPC_ADDRESS", "localhost:9090"),
 		GRPCPort:           getEnv("GRPC_PORT", ""),
+		AuthServiceURL:     getEnv("AUTH_SERVICE_URL", "http://localhost:8081"),
+		BidServiceURL:      getEnv("BID_SERVICE_URL", "http://localhost:8083"),
+		PaymentServiceURL:  getEnv("PAYMENT_SERVICE_URL", "http://localhost:8084"),
 		PGSSLMode:          getEnv("PG_SSL_MODE", "disable"),
 		PGMaxOpenConns:     parseInt(getEnv("PG_MAX_OPEN_CONNS", "25")),
 		PGMaxIdleConns:     parseInt(getEnv("PG_MAX_IDLE_CONNS", "10")),

@@ -10,6 +10,10 @@ services:
       APP_PORT: "8080"
       JWT_SECRET: "change-me-in-production"
       REDIS_URL: "redis:6379"
+      AUTH_SERVICE_URL: "http://auth:8081"
+      AUCTION_SERVICE_URL: "http://auction:8082"
+      BID_SERVICE_URL: "http://bid:8083"
+      PAYMENT_SERVICE_URL: "http://payment:8084"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     healthcheck:
       test: ["CMD", "/gateway", "healthcheck"]

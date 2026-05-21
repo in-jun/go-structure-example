@@ -9,8 +9,9 @@ type Event interface {
 }
 
 type StoredEvent struct {
-	ID         int64
-	EventType  string
-	Payload    []byte
-	OccurredAt time.Time
+	ID          int64
+	AggregateID string
+	EventType   string
+	Payload     []byte
+	OccurredAt  time.Time
 }

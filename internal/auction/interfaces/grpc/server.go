@@ -40,24 +40,21 @@ func (s *server) GetAuction(ctx context.Context, req *auctionv1.GetAuctionReques
 }
 
 func toGRPCError(err error) error {
-	var ce errors.CustomError
-	if stderrors.As(err, &ce) {
-		switch {
-		case ce.Status == 404:
-			return status.Error(codes.NotFound, ce.Message)
-		case ce.Status == 403:
-			return status.Error(codes.PermissionDenied, ce.Message)
-		case ce.Status == 409:
-			return status.Error(codes.Aborted, ce.Message)
-		case ce.Status >= 400 && ce.Status < 500:
-			return status.Error(codes.InvalidArgument, ce.Message)
-		default:
-			slog.Error("internal gRPC error", "message", ce.Message)
-			return status.Error(codes.Internal, "Internal Server Error")
-		}
+	switch {
+	case stderrors.Is(err, errors.ErrNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case stderrors.Is(err, errors.ErrForbidden):
+		return status.Error(codes.PermissionDenied, err.Error())
+	case stderrors.Is(err, errors.ErrConflict):
+		return status.Error(codes.Aborted, err.Error())
+	case stderrors.Is(err, errors.ErrBadRequest):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case stderrors.Is(err, errors.ErrUnauthorized):
+		return status.Error(codes.Unauthenticated, err.Error())
+	default:
+		slog.Error("unhandled gRPC error", "error", err)
+		return status.Error(codes.Internal, "Internal Server Error")
 	}
-	slog.Error("unhandled gRPC error", "error", err)
-	return status.Error(codes.Internal, "Internal Server Error")
 }
 
 func StartGRPCServer(port string, queries application.QueryUseCase) (func(), error) {

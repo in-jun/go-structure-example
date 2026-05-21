@@ -12,6 +12,8 @@ import (
 	"github.com/sony/gobreaker/v2"
 )
 
+var _ domain.AuctionClient = (*auctionClient)(nil)
+
 type auctionClient struct {
 	baseURL    string
 	httpClient *http.Client
