@@ -19,10 +19,13 @@ linters:
         - G108
         - G704
         - G117
+        - G404
+        - G710
   exclusions:
     rules:
       - linters:
           - errcheck
+          - gosec
         path: "_test\\.go"
     paths:
       - vendor

@@ -42,7 +42,11 @@ var (
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		resp, err := http.Get("http://localhost:" + os.Getenv("APP_PORT") + "/health/ready")
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://localhost:"+os.Getenv("APP_PORT")+"/health/ready", nil)
+		if err != nil {
+			os.Exit(1)
+		}
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			os.Exit(1)
 		}
