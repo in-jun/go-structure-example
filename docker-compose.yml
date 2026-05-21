@@ -14,7 +14,7 @@ services:
       AUCTION_SERVICE_URL: "http://auction:8082"
       BID_SERVICE_URL: "http://bid:8083"
       PAYMENT_SERVICE_URL: "http://payment:8084"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
     healthcheck:
       test: ["CMD", "/gateway", "healthcheck"]
       interval: 10s
@@ -32,7 +32,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      jaeger:
+      tempo:
         condition: service_healthy
 
   auth:
@@ -52,7 +52,7 @@ services:
       PG_PASSWORD: postgres
       REDIS_URL: "redis:6379"
       MIGRATION_PATH: /migrations
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
     healthcheck:
       test: ["CMD", "/auth", "healthcheck"]
       interval: 10s
@@ -64,7 +64,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      jaeger:
+      tempo:
         condition: service_healthy
 
   auction:
@@ -82,7 +82,7 @@ services:
       NATS_URL: "nats://nats:4222"
       MIGRATION_PATH: /migrations
       GRPC_PORT: "9090"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
     healthcheck:
       test: ["CMD", "/auction", "healthcheck"]
       interval: 10s
@@ -94,7 +94,7 @@ services:
         condition: service_healthy
       nats:
         condition: service_healthy
-      jaeger:
+      tempo:
         condition: service_healthy
 
   bid:
@@ -113,7 +113,7 @@ services:
       AUCTION_SERVICE_URL: "http://auction:8082"
       AUCTION_GRPC_ADDRESS: "auction:9090"
       MIGRATION_PATH: /migrations
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
     healthcheck:
       test: ["CMD", "/bid", "healthcheck"]
       interval: 10s
@@ -127,7 +127,7 @@ services:
         condition: service_healthy
       auction:
         condition: service_healthy
-      jaeger:
+      tempo:
         condition: service_healthy
 
   payment:
@@ -144,7 +144,7 @@ services:
       PG_PASSWORD: postgres
       NATS_URL: "nats://nats:4222"
       MIGRATION_PATH: /migrations
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
     healthcheck:
       test: ["CMD", "/payment", "healthcheck"]
       interval: 10s
@@ -156,7 +156,7 @@ services:
         condition: service_healthy
       nats:
         condition: service_healthy
-      jaeger:
+      tempo:
         condition: service_healthy
 
   auth-db:
@@ -238,16 +238,15 @@ services:
       timeout: 5s
       retries: 5
 
-  jaeger:
-    image: jaegertracing/all-in-one:1.76.0
-    environment:
-      COLLECTOR_OTLP_ENABLED: "true"
-    ports:
-      - "${JAEGER_UI_PORT:-16686}:16686"
-      - "${JAEGER_OTLP_PORT:-4318}:4318"
+  tempo:
+    image: grafana/tempo:2.7.2
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo/tempo.yaml
+      - tempo-data:/var/tempo
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:14269/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3200/ready || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -300,6 +299,7 @@ services:
     depends_on:
       - prometheus
       - loki
+      - tempo
     restart: unless-stopped
 
 volumes:
@@ -309,4 +309,5 @@ volumes:
   payment-data:
   prometheus-data:
   loki-data:
+  tempo-data:
   grafana-data:

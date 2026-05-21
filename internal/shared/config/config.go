@@ -63,7 +63,7 @@ func Load() {
 		PGMaxOpenConns:     parseInt(getEnv("PG_MAX_OPEN_CONNS", "25")),
 		PGMaxIdleConns:     parseInt(getEnv("PG_MAX_IDLE_CONNS", "10")),
 		CORSAllowOrigins:   getEnv("CORS_ALLOW_ORIGINS", "*"),
-		OTELEndpoint:       getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318"),
+		OTELEndpoint:       getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://tempo:4318"),
 		MigrationMode:      getEnv("MIGRATION_MODE", "auto"),
 		ShutdownTimeout:    parseDuration(getEnv("SHUTDOWN_TIMEOUT", "10s")),
 		RateLimitRPS:       parseFloat(getEnv("RATE_LIMIT_RPS", "100")),
