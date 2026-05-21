@@ -7,7 +7,6 @@ linters:
     - staticcheck
     - unused
     - ineffassign
-    - typecheck
     - bodyclose
     - noctx
     - gosec
