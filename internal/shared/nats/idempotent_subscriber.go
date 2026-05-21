@@ -19,6 +19,7 @@ type IdempotentHandler func(ctx context.Context, envelope *event.Envelope) error
 func SubscribeIdempotent(
 	nc *nats.Conn,
 	subject string,
+	serviceName string,
 	dbGetter func(ctx context.Context) transaction.DBTX,
 	transactor transaction.Transactor,
 	handler IdempotentHandler,
@@ -67,9 +68,9 @@ func SubscribeIdempotent(
 		if err != nil {
 			span.RecordError(err)
 			slog.Error("failed to handle event", "component", "nats", "subject", subject, "error", err)
-			observability.NATSEventsConsumed.WithLabelValues("", subject, "error").Inc()
+			observability.NATSEventsConsumed.WithLabelValues(serviceName, subject, "error").Inc()
 		} else {
-			observability.NATSEventsConsumed.WithLabelValues("", subject, "success").Inc()
+			observability.NATSEventsConsumed.WithLabelValues(serviceName, subject, "success").Inc()
 		}
 	})
 }

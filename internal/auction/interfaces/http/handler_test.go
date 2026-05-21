@@ -68,6 +68,7 @@ func setupRouter(cmdMock *mockCommandUseCase, qryMock *mockQueryUseCase) *server
 	mux.Handle("POST /api/v1/auctions", noopMw(injectUser(http.HandlerFunc(h.Create))))
 	mux.Handle("POST /api/v1/auctions/{id}/open", noopMw(injectUser(http.HandlerFunc(h.Open))))
 	mux.Handle("POST /api/v1/auctions/{id}/close", noopMw(injectUser(http.HandlerFunc(h.Close))))
+	mux.Handle("POST /api/v1/auctions/{id}/cancel", noopMw(http.HandlerFunc(h.Cancel)))
 
 	return mux
 }
@@ -230,5 +231,17 @@ func TestHandler_GetEvents(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected status 200, got %d", w.Code)
+	}
+}
+
+func TestHandler_Cancel(t *testing.T) {
+	router := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/auctions/6ba7b810-9dad-11d1-80b4-00c04fd430c8/cancel", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected status 204, got %d; body: %s", w.Code, w.Body.String())
 	}
 }

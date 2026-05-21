@@ -23,7 +23,7 @@ func NewReader(dbGetter func(ctx context.Context) transaction.DBTX) domain.Event
 func (r *pgReader) FindByPaymentID(ctx context.Context, paymentID string) ([]domainEvent.StoredEvent, error) {
 	db := r.dbGetter(ctx)
 	rows, err := db.QueryContext(ctx,
-		"SELECT id, event_type, payload, occurred_at FROM domain_events WHERE aggregate_type = 'payment' AND aggregate_id = $1 ORDER BY id",
+		"SELECT id, aggregate_id, event_type, payload, occurred_at FROM domain_events WHERE aggregate_type = 'payment' AND aggregate_id = $1 ORDER BY id",
 		paymentID,
 	)
 	if err != nil {
@@ -38,7 +38,7 @@ func (r *pgReader) FindByPaymentID(ctx context.Context, paymentID string) ([]dom
 	var events []domainEvent.StoredEvent
 	for rows.Next() {
 		var e domainEvent.StoredEvent
-		if err := rows.Scan(&e.ID, &e.EventType, &e.Payload, &e.OccurredAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.AggregateID, &e.EventType, &e.Payload, &e.OccurredAt); err != nil {
 			return nil, errors.Internal("Failed to scan domain event")
 		}
 		events = append(events, e)

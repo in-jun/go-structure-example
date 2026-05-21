@@ -201,7 +201,7 @@ func main() {
 	}
 
 	go func() {
-		slog.Info("service starting", "port", config.AppConfig.AppPort)
+		slog.Info("service starting", "service", "bid-service", "port", config.AppConfig.AppPort)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server failed", "error", err)
 			os.Exit(1)

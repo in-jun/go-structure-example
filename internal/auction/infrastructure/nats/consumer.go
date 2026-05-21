@@ -34,7 +34,7 @@ func NewConsumer(
 }
 
 func (c *Consumer) Start(_ context.Context) error {
-	sub1, err := sharedNats.SubscribeIdempotent(c.nc, "payment.completed", c.dbGetter, c.transactor,
+	sub1, err := sharedNats.SubscribeIdempotent(c.nc, "payment.completed", "auction", c.dbGetter, c.transactor,
 		func(ctx context.Context, env *sharedEvent.Envelope) error {
 			slog.Info("received payment.completed", "service", "auction", "auction_id", env.AggregateID)
 			return c.settleHandler.Handle(ctx, command.Settle{AuctionID: env.AggregateID})
@@ -44,7 +44,7 @@ func (c *Consumer) Start(_ context.Context) error {
 	}
 	c.subs = append(c.subs, sub1)
 
-	sub2, err := sharedNats.SubscribeIdempotent(c.nc, "payment.failed", c.dbGetter, c.transactor,
+	sub2, err := sharedNats.SubscribeIdempotent(c.nc, "payment.failed", "auction", c.dbGetter, c.transactor,
 		func(ctx context.Context, env *sharedEvent.Envelope) error {
 			slog.Info("received payment.failed", "service", "auction", "auction_id", env.AggregateID)
 			return c.cancelHandler.Handle(ctx, command.Cancel{AuctionID: env.AggregateID})

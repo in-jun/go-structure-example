@@ -32,7 +32,7 @@ func NewConsumer(
 }
 
 func (c *Consumer) Start(_ context.Context) error {
-	sub, err := sharedNats.SubscribeIdempotent(c.nc, "auction.closed", c.dbGetter, c.transactor,
+	sub, err := sharedNats.SubscribeIdempotent(c.nc, "auction.closed", "bid", c.dbGetter, c.transactor,
 		func(ctx context.Context, env *sharedEvent.Envelope) error {
 			slog.Info("received auction.closed", "service", "bid", "auction_id", env.AggregateID)
 			return c.determineWinnerHandler.Handle(ctx, command.DetermineWinner{AuctionID: env.AggregateID})

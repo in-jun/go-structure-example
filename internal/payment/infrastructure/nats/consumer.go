@@ -39,7 +39,7 @@ type bidWonEvent struct {
 }
 
 func (c *Consumer) Start(_ context.Context) error {
-	sub, err := sharedNats.SubscribeIdempotent(c.nc, "bid.won", c.dbGetter, c.transactor,
+	sub, err := sharedNats.SubscribeIdempotent(c.nc, "bid.won", "payment", c.dbGetter, c.transactor,
 		func(ctx context.Context, env *sharedEvent.Envelope) error {
 			var be bidWonEvent
 			if err := json.Unmarshal(env.Payload, &be); err != nil {
