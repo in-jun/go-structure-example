@@ -275,17 +275,17 @@ services:
     ports:
       - "${PROMETHEUS_PORT:-9091}:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
     restart: unless-stopped
 
   loki:
     image: grafana/loki:3.5.0
-    command: -config.file=/etc/loki/loki-config.yaml
+    command: -config.file=/etc/loki/loki.yaml
     ports:
       - "3100:3100"
     volumes:
-      - ./loki-config.yaml:/etc/loki/loki-config.yaml
+      - ./loki.yaml:/etc/loki/loki.yaml
       - loki-data:/loki
     restart: unless-stopped
     healthcheck:
