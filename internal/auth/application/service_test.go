@@ -186,6 +186,42 @@ func newServiceWithRepo(tokenRepo domain.TokenRepository) *service {
 	}
 }
 
+func TestAuthService_Refresh(t *testing.T) {
+	validToken, _ := entity.ReconstructRefreshToken("valid-token", testUUID, time.Now().Add(time.Hour))
+	tokenGen := &mockTokenGen{accessToken: "new-access-token"}
+	svc := newTestService(&mockUserRepo{}, &mockTokenRepo{token: validToken}, tokenGen)
+
+	result, err := svc.Refresh(context.Background(), command.Refresh{RefreshToken: "valid-token"})
+	if err != nil {
+		t.Fatalf("Refresh() error = %v", err)
+	}
+	if result.AccessToken != "new-access-token" {
+		t.Errorf("AccessToken = %q, want %q", result.AccessToken, "new-access-token")
+	}
+	if result.RefreshToken == "" {
+		t.Error("expected non-empty new refresh token")
+	}
+}
+
+func TestAuthService_Refresh_ExpiredToken(t *testing.T) {
+	expiredToken, _ := entity.ReconstructRefreshToken("expired-token", testUUID, time.Now().Add(-time.Hour))
+	svc := newTestService(&mockUserRepo{}, &mockTokenRepo{token: expiredToken}, &mockTokenGen{})
+
+	_, err := svc.Refresh(context.Background(), command.Refresh{RefreshToken: "expired-token"})
+	if err == nil {
+		t.Fatal("expected error for expired token, got nil")
+	}
+}
+
+func TestAuthService_Refresh_InvalidToken(t *testing.T) {
+	svc := newTestService(&mockUserRepo{}, &mockTokenRepo{token: nil}, &mockTokenGen{})
+
+	_, err := svc.Refresh(context.Background(), command.Refresh{RefreshToken: "nonexistent-token"})
+	if err == nil {
+		t.Fatal("expected error for invalid token, got nil")
+	}
+}
+
 func TestAuthService_Refresh_TokenReuseDetected(t *testing.T) {
 	svc := newServiceWithRepo(&reuseDetectTokenRepo{})
 
