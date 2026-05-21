@@ -1,0 +1,97 @@
+package grpc
+
+import (
+	"context"
+	stderrors "errors"
+	"log/slog"
+	"net"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
+
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+
+	"github.com/in-jun/go-structure-example/internal/auction/application"
+	"github.com/in-jun/go-structure-example/internal/auction/application/query"
+	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	auctionv1 "github.com/in-jun/go-structure-example/proto/auction/v1"
+)
+
+type server struct {
+	auctionv1.UnimplementedAuctionServiceServer
+	queries application.QueryUseCase
+}
+
+func (s *server) GetAuction(ctx context.Context, req *auctionv1.GetAuctionRequest) (*auctionv1.GetAuctionResponse, error) {
+	result, err := s.queries.GetByID(ctx, query.Get{AuctionID: req.AuctionId})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &auctionv1.GetAuctionResponse{
+		Id:         result.ID,
+		SellerId:   result.SellerID,
+		StartPrice: result.StartPrice,
+		Status:     result.Status,
+	}, nil
+}
+
+func toGRPCError(err error) error {
+	var ce errors.CustomError
+	if stderrors.As(err, &ce) {
+		switch {
+		case ce.Status == 404:
+			return status.Error(codes.NotFound, ce.Message)
+		case ce.Status == 403:
+			return status.Error(codes.PermissionDenied, ce.Message)
+		case ce.Status == 409:
+			return status.Error(codes.Aborted, ce.Message)
+		case ce.Status >= 400 && ce.Status < 500:
+			return status.Error(codes.InvalidArgument, ce.Message)
+		default:
+			slog.Error("internal gRPC error", "message", ce.Message)
+			return status.Error(codes.Internal, "Internal Server Error")
+		}
+	}
+	slog.Error("unhandled gRPC error", "error", err)
+	return status.Error(codes.Internal, "Internal Server Error")
+}
+
+func StartGRPCServer(port string, queries application.QueryUseCase) (func(), error) {
+	lis, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return nil, err
+	}
+
+	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainUnaryInterceptor(
+			recoveryInterceptor(),
+			loggingInterceptor(),
+		),
+	)
+
+	auctionv1.RegisterAuctionServiceServer(grpcServer, &server{queries: queries})
+
+	healthServer := health.NewServer()
+	healthpb.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("auction.v1.AuctionService", healthpb.HealthCheckResponse_SERVING)
+
+	reflection.Register(grpcServer)
+
+	go func() {
+		slog.Info("gRPC server starting", "port", port)
+		if err := grpcServer.Serve(lis); err != nil {
+			slog.Error("gRPC server failed", "error", err)
+		}
+	}()
+
+	return func() {
+		healthServer.SetServingStatus("auction.v1.AuctionService", healthpb.HealthCheckResponse_NOT_SERVING)
+		grpcServer.GracefulStop()
+		slog.Info("gRPC server stopped")
+	}, nil
+}

@@ -149,7 +149,7 @@ func main() {
 		middleware.RateLimit(redisClient, config.AppConfig.RateLimitRPS, config.AppConfig.RateLimitBurst),
 	)
 
-	healthChecker := health.NewChecker(db).WithRedis(redisClient).WithBuildInfo(Version, BuildTime, GitCommit)
+	healthChecker := health.NewChecker(db, nil).WithRedis(redisClient).WithBuildInfo(Version, BuildTime, GitCommit)
 	healthChecker.RegisterRoutes(mux)
 
 	authHandler.RegisterRoutes(mux, stack)

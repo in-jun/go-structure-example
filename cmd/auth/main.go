@@ -126,7 +126,7 @@ func main() {
 
 	mux.Handle("GET /metrics", observability.MetricsHandler())
 
-	healthChecker := health.NewChecker(db).WithRedis(redisClient).WithBuildInfo(Version, BuildTime, GitCommit)
+	healthChecker := health.NewChecker(db, nil).WithRedis(redisClient).WithBuildInfo(Version, BuildTime, GitCommit)
 	healthChecker.RegisterRoutes(mux)
 
 	handler.RegisterRoutes(mux, stack)

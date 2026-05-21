@@ -8,18 +8,24 @@ import (
 
 	goredis "github.com/go-redis/redis/v8"
 	"github.com/in-jun/go-structure-example/internal/shared/server"
+	"github.com/nats-io/nats.go"
 )
 
 type Checker struct {
 	db        *sql.DB
+	nc        *nats.Conn
 	redis     *goredis.Client
 	version   string
 	buildTime string
 	gitCommit string
 }
 
-func NewChecker(db *sql.DB) *Checker {
-	return &Checker{db: db}
+func NewChecker(db *sql.DB, nc *nats.Conn) *Checker {
+	return &Checker{db: db, nc: nc}
+}
+
+func NewCheckerWithoutDB(nc *nats.Conn) *Checker {
+	return &Checker{nc: nc}
 }
 
 func (c *Checker) WithRedis(rc *goredis.Client) *Checker {
@@ -53,33 +59,42 @@ func (c *Checker) readyHandler(w http.ResponseWriter, r *http.Request) {
 	checks := map[string]any{}
 	ready := true
 
+	pingCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
 	if c.db != nil {
-		tctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-		defer cancel()
-		if err := c.db.PingContext(tctx); err != nil {
-			checks["postgres"] = "unhealthy: " + err.Error()
+		if err := c.db.PingContext(pingCtx); err != nil {
+			checks["postgres"] = err.Error()
 			ready = false
 		} else {
-			checks["postgres"] = "healthy"
+			checks["postgres"] = "ok"
+		}
+	}
+
+	if c.nc != nil {
+		if c.nc.IsConnected() {
+			checks["nats"] = "ok"
+		} else {
+			checks["nats"] = "disconnected"
+			ready = false
 		}
 	}
 
 	if c.redis != nil {
-		tctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-		defer cancel()
-		if err := c.redis.Ping(tctx).Err(); err != nil {
-			checks["redis"] = "unhealthy: " + err.Error()
+		if err := c.redis.Ping(pingCtx).Err(); err != nil {
+			checks["redis"] = err.Error()
 			ready = false
 		} else {
-			checks["redis"] = "healthy"
+			checks["redis"] = "ok"
 		}
 	}
 
 	status := http.StatusOK
-	statusStr := "ok"
+	statusText := "ready"
 	if !ready {
 		status = http.StatusServiceUnavailable
-		statusStr = "degraded"
+		statusText = "not ready"
 	}
-	server.JSON(w, status, map[string]any{"status": statusStr, "checks": checks})
+
+	server.JSON(w, status, map[string]any{"status": statusText, "checks": checks})
 }
