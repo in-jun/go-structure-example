@@ -150,7 +150,7 @@ const file_proto_auction_v1_auction_proto_rawDesc = "" +
 	"\x06status\x18\x04 \x01(\tR\x06status2]\n" +
 	"\x0eAuctionService\x12K\n" +
 	"\n" +
-	"GetAuction\x12\x1d.auction.v1.GetAuctionRequest\x1a\x1e.auction.v1.GetAuctionResponseBAZ?github.com/in-jun/go-structure-example/proto/auction/v1;auctionv1b\x06proto3"
+	"GetAuction\x12\x1d.auction.v1.GetAuctionRequest\x1a\x1e.auction.v1.GetAuctionResponseBCZAgithub.com/in-jun/go-structure-example/proto/auction/v1;auctionv1b\x06proto3"
 
 var (
 	file_proto_auction_v1_auction_proto_rawDescOnce sync.Once
