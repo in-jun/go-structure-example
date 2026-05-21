@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/in-jun/go-structure-example/internal/auction/domain"
+	"github.com/in-jun/go-structure-example/internal/auction/domain/vo"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
 	"github.com/in-jun/go-structure-example/internal/shared/query"
 	"github.com/in-jun/go-structure-example/internal/shared/transaction"
@@ -25,8 +26,13 @@ func NewCancelHandler(auctionRepo domain.AuctionRepository, eventPublisher domai
 }
 
 func (h *CancelHandler) Handle(ctx context.Context, cmd Cancel) error {
+	av, err := vo.NewAuctionIDVO(cmd.AuctionID)
+	if err != nil {
+		return errors.BadRequest(err.Error())
+	}
+
 	return h.transactor.WithinTransaction(ctx, func(txCtx context.Context) error {
-		auction, err := h.auctionRepo.FindByID(txCtx, cmd.AuctionID, query.ForUpdate())
+		auction, err := h.auctionRepo.FindByID(txCtx, av.ID, query.ForUpdate())
 		if err != nil {
 			return err
 		}
