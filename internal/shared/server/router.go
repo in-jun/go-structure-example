@@ -363,10 +363,6 @@ func (n *node) addRouteInner(routePath, pattern string, handler http.Handler) {
 		return
 	}
 
-	if idx := strings.IndexByte(routePath, '{'); idx >= 0 && (idx < len(n.path) || n.path == routePath[:idx] || strings.HasPrefix(routePath, n.path)) {
-		// fall through to normal prefix handling
-	}
-
 	lcp := longestCommonPrefix(routePath, n.path)
 
 	if lcp < len(n.path) {
