@@ -41,6 +41,12 @@ func (m *mockTransactor) WithinTransaction(_ context.Context, fn func(ctx contex
 	return fn(context.Background())
 }
 
+type mockEventReader struct{}
+
+func (m *mockEventReader) FindByPaymentID(_ context.Context, _ string) ([]domainEvent.StoredEvent, error) {
+	return nil, nil
+}
+
 func newTestService(repo *mockPaymentRepo) *service {
 	processor := domainService.NewPaymentProcessor(&mockGateway{})
 	return NewService(
@@ -48,6 +54,7 @@ func newTestService(repo *mockPaymentRepo) *service {
 		command.NewConfirmPaymentHandler(repo, processor, &mockPublisher{}, &mockTransactor{}),
 		command.NewRefundPaymentHandler(repo, processor, &mockPublisher{}, &mockTransactor{}),
 		query.NewGetPaymentHandler(repo),
+		query.NewEventHistoryHandler(&mockEventReader{}),
 	)
 }
 

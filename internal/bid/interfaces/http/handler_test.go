@@ -38,6 +38,9 @@ func (m *mockQueryUseCase) GetHighest(_ context.Context, _ query.GetHighest) (*q
 func (m *mockQueryUseCase) ListBids(_ context.Context, _ query.ListBids) (*query.ListResult, error) {
 	return m.listResp, m.err
 }
+func (m *mockQueryUseCase) GetEvents(_ context.Context, _ query.EventHistory) (*query.EventHistoryResult, error) {
+	return &query.EventHistoryResult{Events: []query.EventHistoryItem{}}, m.err
+}
 
 const testUserID = "550e8400-e29b-41d4-a716-446655440000"
 const testAuctionID = "660e8400-e29b-41d4-a716-446655440000"

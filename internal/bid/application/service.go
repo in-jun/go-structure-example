@@ -15,6 +15,7 @@ type CommandUseCase interface {
 type QueryUseCase interface {
 	GetHighest(ctx context.Context, qry query.GetHighest) (*query.Result, error)
 	ListBids(ctx context.Context, qry query.ListBids) (*query.ListResult, error)
+	GetEvents(ctx context.Context, qry query.EventHistory) (*query.EventHistoryResult, error)
 }
 
 var (
@@ -27,6 +28,7 @@ type service struct {
 	determineWinner *command.DetermineWinnerHandler
 	getHighest      *query.GetHighestHandler
 	listBids        *query.ListBidsHandler
+	getEvents       *query.EventHistoryHandler
 }
 
 func NewService(
@@ -34,10 +36,11 @@ func NewService(
 	determineWinner *command.DetermineWinnerHandler,
 	getHighest *query.GetHighestHandler,
 	listBids *query.ListBidsHandler,
+	getEvents *query.EventHistoryHandler,
 ) *service {
 	return &service{
 		placeBid: placeBid, determineWinner: determineWinner,
-		getHighest: getHighest, listBids: listBids,
+		getHighest: getHighest, listBids: listBids, getEvents: getEvents,
 	}
 }
 
@@ -52,4 +55,7 @@ func (s *service) GetHighest(ctx context.Context, qry query.GetHighest) (*query.
 }
 func (s *service) ListBids(ctx context.Context, qry query.ListBids) (*query.ListResult, error) {
 	return s.listBids.Handle(ctx, qry)
+}
+func (s *service) GetEvents(ctx context.Context, qry query.EventHistory) (*query.EventHistoryResult, error) {
+	return s.getEvents.Handle(ctx, qry)
 }

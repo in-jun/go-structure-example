@@ -265,11 +265,13 @@ func main() {
 	mux.Handle("POST /api/v1/auctions/{id}/bids", authedProxy(bidSvc))
 	mux.Handle("GET /api/v1/auctions/{id}/bids", publicProxy(bidSvc))
 	mux.Handle("GET /api/v1/auctions/{id}/bids/highest", publicProxy(bidSvc))
+	mux.Handle("GET /api/v1/auctions/{id}/bids/events", publicProxy(bidSvc))
 
 	// Payment routes
 	mux.Handle("POST /api/v1/payments/{id}/confirm", authedProxy(paymentSvc))
 	mux.Handle("POST /api/v1/payments/{id}/refund", authedProxy(paymentSvc))
 	mux.Handle("GET /api/v1/payments/{id}", authedNoIdempotency(paymentSvc))
+	mux.Handle("GET /api/v1/payments/{id}/events", authedNoIdempotency(paymentSvc))
 
 	srv := &http.Server{
 		Addr:         ":" + config.AppConfig.AppPort,

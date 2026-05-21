@@ -127,6 +127,7 @@ func main() {
 	transactor := transaction.NewTransactor(pgDB)
 
 	bidRepo := pg.NewBidRepository(dbGetter)
+	eventReader := event.NewReader(dbGetter)
 	auctionClient, err := auctionGRPC.NewAuctionClient(config.AppConfig.AuctionGRPCAddress)
 	if err != nil {
 		slog.Error("failed to create auction gRPC client", "error", err)
@@ -141,6 +142,7 @@ func main() {
 	determineWinnerHandler := command.NewDetermineWinnerHandler(bidRepo, compositePublisher, transactor)
 	getHighestHandler := query.NewGetHighestHandler(bidRepo)
 	listBidsHandler := query.NewListBidsHandler(bidRepo)
+	eventHistoryHandler := query.NewEventHistoryHandler(eventReader)
 
 	consumer := bidNats.NewConsumer(nc, determineWinnerHandler, dbGetter, transactor)
 	if err := consumer.Start(ctx); err != nil {
@@ -163,7 +165,7 @@ func main() {
 
 	svc := application.NewService(
 		placeBidHandler, determineWinnerHandler,
-		getHighestHandler, listBidsHandler,
+		getHighestHandler, listBidsHandler, eventHistoryHandler,
 	)
 
 	var commands application.CommandUseCase = svc

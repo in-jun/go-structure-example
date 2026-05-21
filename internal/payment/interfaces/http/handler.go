@@ -26,6 +26,7 @@ func (h *Handler) RegisterRoutes(mux *server.Router, mw server.Middleware) {
 	gatewayAuth := middleware.GatewayAuth()
 
 	mux.Handle("GET /api/v1/payments/{id}", mw(gatewayAuth(http.HandlerFunc(h.GetPayment))))
+	mux.Handle("GET /api/v1/payments/{id}/events", mw(gatewayAuth(http.HandlerFunc(h.GetEvents))))
 	mux.Handle("POST /api/v1/payments/{id}/confirm", mw(gatewayAuth(http.HandlerFunc(h.ConfirmPayment))))
 	mux.Handle("POST /api/v1/payments/{id}/refund", mw(gatewayAuth(http.HandlerFunc(h.RefundPayment))))
 }
@@ -48,6 +49,20 @@ func (h *Handler) GetPayment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	server.JSON(w, http.StatusOK, toGetResponse(result))
+}
+
+func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	result, err := h.queries.GetEvents(r.Context(), query.EventHistory{
+		PaymentID: id,
+	})
+	if err != nil {
+		middleware.HandleError(w, err)
+		return
+	}
+
+	server.JSON(w, http.StatusOK, toEventHistoryResponse(result))
 }
 
 func (h *Handler) ConfirmPayment(w http.ResponseWriter, r *http.Request) {

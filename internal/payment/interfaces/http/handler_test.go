@@ -36,6 +36,9 @@ type mockQueryUseCase struct {
 func (m *mockQueryUseCase) GetPayment(_ context.Context, _ query.GetPayment) (*query.Result, error) {
 	return m.getResp, m.err
 }
+func (m *mockQueryUseCase) GetEvents(_ context.Context, _ query.EventHistory) (*query.EventHistoryResult, error) {
+	return &query.EventHistoryResult{Events: []query.EventHistoryItem{}}, m.err
+}
 
 const testUserID = "550e8400-e29b-41d4-a716-446655440000"
 const testPaymentID = "660e8400-e29b-41d4-a716-446655440000"

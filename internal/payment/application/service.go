@@ -15,6 +15,7 @@ type CommandUseCase interface {
 
 type QueryUseCase interface {
 	GetPayment(ctx context.Context, qry query.GetPayment) (*query.Result, error)
+	GetEvents(ctx context.Context, qry query.EventHistory) (*query.EventHistoryResult, error)
 }
 
 var (
@@ -27,6 +28,7 @@ type service struct {
 	confirmPayment *command.ConfirmPaymentHandler
 	refundPayment  *command.RefundPaymentHandler
 	getPayment     *query.GetPaymentHandler
+	getEvents      *query.EventHistoryHandler
 }
 
 func NewService(
@@ -34,10 +36,11 @@ func NewService(
 	confirmPayment *command.ConfirmPaymentHandler,
 	refundPayment *command.RefundPaymentHandler,
 	getPayment *query.GetPaymentHandler,
+	getEvents *query.EventHistoryHandler,
 ) *service {
 	return &service{
 		createPayment: createPayment, confirmPayment: confirmPayment,
-		refundPayment: refundPayment, getPayment: getPayment,
+		refundPayment: refundPayment, getPayment: getPayment, getEvents: getEvents,
 	}
 }
 
@@ -52,4 +55,7 @@ func (s *service) RefundPayment(ctx context.Context, cmd command.RefundPayment) 
 }
 func (s *service) GetPayment(ctx context.Context, qry query.GetPayment) (*query.Result, error) {
 	return s.getPayment.Handle(ctx, qry)
+}
+func (s *service) GetEvents(ctx context.Context, qry query.EventHistory) (*query.EventHistoryResult, error) {
+	return s.getEvents.Handle(ctx, qry)
 }

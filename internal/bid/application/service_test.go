@@ -50,12 +50,19 @@ func (m *mockTransactor) WithinTransaction(_ context.Context, fn func(ctx contex
 	return fn(context.Background())
 }
 
+type mockEventReader struct{}
+
+func (m *mockEventReader) FindByAuctionID(_ context.Context, _ string) ([]domainEvent.StoredEvent, error) {
+	return nil, nil
+}
+
 func newTestService(repo *mockBidRepo, client *mockAuctionClient) *service {
 	return NewService(
 		command.NewPlaceBidHandler(repo, client, &domainService.BidPolicy{}, &mockPublisher{}, &mockTransactor{}),
 		command.NewDetermineWinnerHandler(repo, &mockPublisher{}, &mockTransactor{}),
 		query.NewGetHighestHandler(repo),
 		query.NewListBidsHandler(repo),
+		query.NewEventHistoryHandler(&mockEventReader{}),
 	)
 }
 

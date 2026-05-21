@@ -2,6 +2,7 @@ package nats
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 
 	"github.com/in-jun/go-structure-example/internal/auction/application/command"
@@ -10,6 +11,10 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 	"github.com/nats-io/nats.go"
 )
+
+type paymentEvent struct {
+	AuctionID string `json:"auction_id"`
+}
 
 type Consumer struct {
 	nc            *nats.Conn
@@ -36,8 +41,12 @@ func NewConsumer(
 func (c *Consumer) Start(_ context.Context) error {
 	sub1, err := sharedNats.SubscribeIdempotent(c.nc, "payment.completed", "auction", c.dbGetter, c.transactor,
 		func(ctx context.Context, env *sharedEvent.Envelope) error {
-			slog.Info("received payment.completed", "service", "auction", "auction_id", env.AggregateID)
-			return c.settleHandler.Handle(ctx, command.Settle{AuctionID: env.AggregateID})
+			var pe paymentEvent
+			if err := json.Unmarshal(env.Payload, &pe); err != nil {
+				return err
+			}
+			slog.Info("received payment.completed", "service", "auction", "auction_id", pe.AuctionID)
+			return c.settleHandler.Handle(ctx, command.Settle{AuctionID: pe.AuctionID})
 		})
 	if err != nil {
 		return err
@@ -46,8 +55,12 @@ func (c *Consumer) Start(_ context.Context) error {
 
 	sub2, err := sharedNats.SubscribeIdempotent(c.nc, "payment.failed", "auction", c.dbGetter, c.transactor,
 		func(ctx context.Context, env *sharedEvent.Envelope) error {
-			slog.Info("received payment.failed", "service", "auction", "auction_id", env.AggregateID)
-			return c.cancelHandler.Handle(ctx, command.Cancel{AuctionID: env.AggregateID})
+			var pe paymentEvent
+			if err := json.Unmarshal(env.Payload, &pe); err != nil {
+				return err
+			}
+			slog.Info("received payment.failed", "service", "auction", "auction_id", pe.AuctionID)
+			return c.cancelHandler.Handle(ctx, command.Cancel{AuctionID: pe.AuctionID})
 		})
 	if err != nil {
 		return err

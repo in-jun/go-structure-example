@@ -25,7 +25,7 @@ func NewPaymentCreated(paymentID, auctionID, winnerID string, amount int64) Paym
 }
 
 func (e PaymentCreated) EventName() string     { return "payment.created" }
-func (e PaymentCreated) AggregateID() string   { return e.AuctionID }
+func (e PaymentCreated) AggregateID() string   { return e.PaymentID }
 func (e PaymentCreated) OccurredAt() time.Time { return e.Timestamp }
 
 type PaymentCompleted struct {
@@ -44,7 +44,7 @@ func NewPaymentCompleted(paymentID, auctionID, winnerID string, amount int64) Pa
 }
 
 func (e PaymentCompleted) EventName() string    { return "payment.completed" }
-func (e PaymentCompleted) AggregateID() string  { return e.AuctionID }
+func (e PaymentCompleted) AggregateID() string  { return e.PaymentID }
 func (e PaymentCompleted) OccurredAt() time.Time { return e.Timestamp }
 
 type PaymentFailed struct {
@@ -64,7 +64,7 @@ func NewPaymentFailed(paymentID, auctionID, winnerID string, amount int64, reaso
 }
 
 func (e PaymentFailed) EventName() string    { return "payment.failed" }
-func (e PaymentFailed) AggregateID() string  { return e.AuctionID }
+func (e PaymentFailed) AggregateID() string  { return e.PaymentID }
 func (e PaymentFailed) OccurredAt() time.Time { return e.Timestamp }
 
 type PaymentRefunded struct {
@@ -84,5 +84,5 @@ func NewPaymentRefunded(paymentID, auctionID, winnerID string, amount int64, rea
 }
 
 func (e PaymentRefunded) EventName() string     { return "payment.refunded" }
-func (e PaymentRefunded) AggregateID() string   { return e.AuctionID }
+func (e PaymentRefunded) AggregateID() string   { return e.PaymentID }
 func (e PaymentRefunded) OccurredAt() time.Time { return e.Timestamp }

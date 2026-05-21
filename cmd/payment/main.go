@@ -128,6 +128,7 @@ func main() {
 	transactor := transaction.NewTransactor(pgDB)
 
 	paymentRepo := pg.NewPaymentRepository(dbGetter)
+	eventReader := event.NewReader(dbGetter)
 	mockGW := gateway.NewMockGateway()
 	processor := service.NewPaymentProcessor(mockGW)
 
@@ -138,6 +139,7 @@ func main() {
 	confirmPaymentHandler := command.NewConfirmPaymentHandler(paymentRepo, processor, compositePublisher, transactor)
 	refundPaymentHandler := command.NewRefundPaymentHandler(paymentRepo, processor, compositePublisher, transactor)
 	getPaymentHandler := query.NewGetPaymentHandler(paymentRepo)
+	eventHistoryHandler := query.NewEventHistoryHandler(eventReader)
 
 	consumer := paymentNats.NewConsumer(nc, createPaymentHandler, dbGetter, transactor)
 	if err := consumer.Start(ctx); err != nil {
@@ -153,7 +155,7 @@ func main() {
 	relay := outbox.NewRelay(pgDB, nc, "payment")
 	go relay.Start(ctx)
 
-	svc := application.NewService(createPaymentHandler, confirmPaymentHandler, refundPaymentHandler, getPaymentHandler)
+	svc := application.NewService(createPaymentHandler, confirmPaymentHandler, refundPaymentHandler, getPaymentHandler, eventHistoryHandler)
 
 	var commands application.CommandUseCase = svc
 	var queries application.QueryUseCase = svc

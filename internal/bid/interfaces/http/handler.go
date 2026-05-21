@@ -26,6 +26,7 @@ func (h *Handler) RegisterRoutes(mux *server.Router, mw server.Middleware) {
 
 	mux.Handle("GET /api/v1/auctions/{auction_id}/bids", mw(http.HandlerFunc(h.ListBids)))
 	mux.Handle("GET /api/v1/auctions/{auction_id}/bids/highest", mw(http.HandlerFunc(h.GetHighest)))
+	mux.Handle("GET /api/v1/auctions/{auction_id}/bids/events", mw(http.HandlerFunc(h.GetEvents)))
 	mux.Handle("POST /api/v1/auctions/{auction_id}/bids", mw(gatewayAuth(http.HandlerFunc(h.PlaceBid))))
 }
 
@@ -77,6 +78,20 @@ func (h *Handler) ListBids(w http.ResponseWriter, r *http.Request) {
 	}
 
 	server.JSON(w, http.StatusOK, toListResponse(result))
+}
+
+func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
+	auctionID := r.PathValue("auction_id")
+
+	result, err := h.queries.GetEvents(r.Context(), query.EventHistory{
+		AuctionID: auctionID,
+	})
+	if err != nil {
+		middleware.HandleError(w, err)
+		return
+	}
+
+	server.JSON(w, http.StatusOK, toEventHistoryResponse(result))
 }
 
 func (h *Handler) GetHighest(w http.ResponseWriter, r *http.Request) {
