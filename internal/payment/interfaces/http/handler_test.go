@@ -160,6 +160,34 @@ func TestHandler_RefundPayment_NotOwner(t *testing.T) {
 	}
 }
 
+func TestHandler_ConfirmPayment_Conflict(t *testing.T) {
+	cmdMock := &mockCommandUseCase{err: errors.Conflict("Payment already processed")}
+
+	router := setupRouter(cmdMock, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/payments/"+testPaymentID+"/confirm", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("expected status 409, got %d", w.Code)
+	}
+}
+
+func TestHandler_RefundPayment_Conflict(t *testing.T) {
+	cmdMock := &mockCommandUseCase{err: errors.Conflict("Payment cannot be refunded")}
+
+	router := setupRouter(cmdMock, &mockQueryUseCase{})
+	req := httptest.NewRequest("POST", "/api/v1/payments/"+testPaymentID+"/refund", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("expected status 409, got %d", w.Code)
+	}
+}
+
 func TestHandler_GetEvents(t *testing.T) {
 	router := setupRouter(&mockCommandUseCase{}, &mockQueryUseCase{})
 	req := httptest.NewRequest("GET", "/api/v1/payments/"+testPaymentID+"/events", nil)

@@ -176,3 +176,31 @@ func TestHandler_GetEvents(t *testing.T) {
 		t.Errorf("expected status 200, got %d", w.Code)
 	}
 }
+
+func TestHandler_PlaceBid_Forbidden(t *testing.T) {
+	cmdMock := &mockCommandUseCase{err: errors.Forbidden("Cannot bid on your own auction")}
+	router := setupRouter(cmdMock, &mockQueryUseCase{})
+	body, _ := json.Marshal(PlaceBidRequest{Amount: 1000})
+	req := httptest.NewRequest("POST", "/api/v1/auctions/"+testAuctionID+"/bids", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected status 403, got %d", w.Code)
+	}
+}
+
+func TestHandler_ListBids_Error(t *testing.T) {
+	qryMock := &mockQueryUseCase{err: errors.Internal("db error")}
+	router := setupRouter(&mockCommandUseCase{}, qryMock)
+	req := httptest.NewRequest("GET", "/api/v1/auctions/"+testAuctionID+"/bids", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected status 500, got %d", w.Code)
+	}
+}
