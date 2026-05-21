@@ -43,12 +43,12 @@ func (r *bidRepository) FindHighestByAuctionID(ctx context.Context, auctionID st
 	var amount int64
 	var createdAt time.Time
 
-	query := "SELECT id, auction_id, bidder_id, amount, created_at FROM bids WHERE auction_id = $1 ORDER BY amount DESC LIMIT 1"
+	q := "SELECT id, auction_id, bidder_id, amount, created_at FROM bids WHERE auction_id = $1 ORDER BY amount DESC LIMIT 1"
 	if cfg.ForUpdate {
-		query += " FOR UPDATE"
+		q += " FOR UPDATE"
 	}
 
-	err := db.QueryRowContext(ctx, query, auctionID).Scan(&id, &aucID, &bidderID, &amount, &createdAt)
+	err := db.QueryRowContext(ctx, q, auctionID).Scan(&id, &aucID, &bidderID, &amount, &createdAt)
 	if stderrors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

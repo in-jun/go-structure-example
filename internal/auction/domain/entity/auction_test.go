@@ -87,6 +87,15 @@ func TestAuction_Open(t *testing.T) {
 	}
 }
 
+func TestAuction_Open_ExpiredEndTime(t *testing.T) {
+	pastTime := time.Now().Add(-1 * time.Hour)
+	auction := ReconstructAuction(uuid.New().String(), testSellerID, "Test", "", 100, StatusDraft, pastTime, time.Now(), time.Now())
+
+	if err := auction.Open(); err != ErrEndTimeExpired {
+		t.Errorf("expected ErrEndTimeExpired, got %v", err)
+	}
+}
+
 func TestAuction_Close(t *testing.T) {
 	auction, _ := NewAuction(testSellerID, "Test", "", 100, futureTime())
 

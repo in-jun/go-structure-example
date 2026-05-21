@@ -8,6 +8,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/bid/domain/service"
 	"github.com/in-jun/go-structure-example/internal/bid/domain/vo"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	"github.com/in-jun/go-structure-example/internal/shared/query"
 	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
@@ -72,7 +73,7 @@ func (h *PlaceBidHandler) Handle(ctx context.Context, cmd PlaceBid) (*PlaceBidRe
 
 	var result *PlaceBidResult
 	err = h.transactor.WithinTransaction(ctx, func(txCtx context.Context) error {
-		highest, err := h.bidRepo.FindHighestByAuctionID(txCtx, av.ID)
+		highest, err := h.bidRepo.FindHighestByAuctionID(txCtx, av.ID, query.ForUpdate())
 		if err != nil {
 			return err
 		}

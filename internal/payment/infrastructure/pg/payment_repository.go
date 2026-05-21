@@ -42,12 +42,12 @@ func (r *paymentRepository) FindByID(ctx context.Context, id string, opts ...que
 	var amount int64
 	var createdAt, updatedAt time.Time
 
-	query := "SELECT id, auction_id, winner_id, amount, status, created_at, updated_at FROM payments WHERE id = $1"
+	q := "SELECT id, auction_id, winner_id, amount, status, created_at, updated_at FROM payments WHERE id = $1"
 	if cfg.ForUpdate {
-		query += " FOR UPDATE"
+		q += " FOR UPDATE"
 	}
 
-	err := db.QueryRowContext(ctx, query, id).Scan(&pid, &auctionID, &winnerID, &amount, &status, &createdAt, &updatedAt)
+	err := db.QueryRowContext(ctx, q, id).Scan(&pid, &auctionID, &winnerID, &amount, &status, &createdAt, &updatedAt)
 	if stderrors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

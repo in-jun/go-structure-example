@@ -43,12 +43,12 @@ func (r *auctionRepository) FindByID(ctx context.Context, id string, opts ...que
 	var startPrice int64
 	var endTime, createdAt, updatedAt time.Time
 
-	query := "SELECT id, seller_id, title, description, start_price, status, end_time, created_at, updated_at FROM auctions WHERE id = $1"
+	q := "SELECT id, seller_id, title, description, start_price, status, end_time, created_at, updated_at FROM auctions WHERE id = $1"
 	if cfg.ForUpdate {
-		query += " FOR UPDATE"
+		q += " FOR UPDATE"
 	}
 
-	err := db.QueryRowContext(ctx, query, id).Scan(&aid, &sellerID, &title, &description, &startPrice, &status, &endTime, &createdAt, &updatedAt)
+	err := db.QueryRowContext(ctx, q, id).Scan(&aid, &sellerID, &title, &description, &startPrice, &status, &endTime, &createdAt, &updatedAt)
 	if stderrors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

@@ -22,6 +22,7 @@ var (
 	ErrNotClosed      = errors.New("auction is not closed")
 	ErrNotOwner       = errors.New("not the auction owner")
 	ErrCannotCancel   = errors.New("auction cannot be cancelled in current status")
+	ErrEndTimeExpired = errors.New("auction end time has already passed")
 	errInvalidInput   = errors.New("seller ID and title are required")
 	errInvalidPrice   = errors.New("start price must be positive")
 	errInvalidEndTime = errors.New("end time must be in the future")
@@ -90,6 +91,9 @@ func (a *Auction) IsOwnedBy(userID string) bool { return a.sellerID == userID }
 func (a *Auction) Open() error {
 	if a.status != StatusDraft {
 		return ErrNotDraft
+	}
+	if !a.endTime.After(time.Now()) {
+		return ErrEndTimeExpired
 	}
 	a.status = StatusOpen
 	a.updatedAt = time.Now()

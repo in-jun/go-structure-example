@@ -61,7 +61,8 @@ func (r *Relay) publishBatch(ctx context.Context) error {
 	}()
 
 	rows, err := tx.QueryContext(ctx,
-		"SELECT id, event_type, aggregate_id, payload, occurred_at FROM domain_events WHERE published = FALSE ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED",
+		"SELECT id, event_type, aggregate_id, payload, occurred_at FROM domain_events WHERE published = FALSE AND aggregate_type = $1 ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED",
+		r.serviceName,
 	)
 	if err != nil {
 		return err
