@@ -30,6 +30,7 @@ func (h *Handler) RegisterRoutes(mux *server.Router, mw server.Middleware) {
 	mux.Handle("POST /api/v1/auctions", mw(gatewayAuth(http.HandlerFunc(h.Create))))
 	mux.Handle("POST /api/v1/auctions/{id}/open", mw(gatewayAuth(http.HandlerFunc(h.Open))))
 	mux.Handle("POST /api/v1/auctions/{id}/close", mw(gatewayAuth(http.HandlerFunc(h.Close))))
+	mux.Handle("POST /api/v1/auctions/{id}/cancel", mw(gatewayAuth(http.HandlerFunc(h.Cancel))))
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
@@ -129,6 +130,19 @@ func (h *Handler) Close(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.commands.Close(r.Context(), command.Close{
 		UserID:    userID,
+		AuctionID: id,
+	}); err != nil {
+		middleware.HandleError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	if err := h.commands.Cancel(r.Context(), command.Cancel{
 		AuctionID: id,
 	}); err != nil {
 		middleware.HandleError(w, err)

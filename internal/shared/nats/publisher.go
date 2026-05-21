@@ -3,6 +3,7 @@ package nats
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/in-jun/go-structure-example/internal/shared/event"
 	"github.com/in-jun/go-structure-example/internal/shared/observability"
@@ -10,6 +11,13 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
+
+func serviceFromSubject(subject string) string {
+	if i := strings.IndexByte(subject, '.'); i > 0 {
+		return subject[:i]
+	}
+	return subject
+}
 
 func Publish(nc *nats.Conn, subject string, envelope *event.Envelope) error {
 	data, err := json.Marshal(envelope)
@@ -19,7 +27,7 @@ func Publish(nc *nats.Conn, subject string, envelope *event.Envelope) error {
 	if err := nc.Publish(subject, data); err != nil {
 		return err
 	}
-	observability.NATSEventsPublished.WithLabelValues("", subject).Inc()
+	observability.NATSEventsPublished.WithLabelValues(serviceFromSubject(subject), subject).Inc()
 	return nil
 }
 

@@ -93,7 +93,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jti := r.Header.Get("X-Token-JTI")
+	jti := server.TokenJTI(r)
 
 	if err := h.commands.Logout(r.Context(), command.Logout{
 		RefreshToken:   req.RefreshToken,

@@ -62,7 +62,9 @@ func Idempotency(redisClient *redis.Client) func(http.Handler) http.Handler {
 					Body:        rw.Body.Bytes(),
 				}
 				if data, err := json.Marshal(resp); err == nil {
-					redisClient.Set(r.Context(), redisKey, data, idempotencyTTL)
+					if err := redisClient.Set(r.Context(), redisKey, data, idempotencyTTL).Err(); err != nil {
+						slog.Warn("failed to cache idempotency response", "key", redisKey, "error", err)
+					}
 				}
 			}
 		})

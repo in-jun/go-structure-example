@@ -22,6 +22,7 @@ type Create struct {
 
 type CreateResult struct {
 	ID          string
+	SellerID    string
 	Title       string
 	Description string
 	StartPrice  int64
@@ -73,7 +74,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd Create) (*CreateResult, 
 		auction.ClearEvents()
 
 		result = &CreateResult{
-			ID: auction.ID(), Title: auction.Title(), Description: auction.Description(),
+			ID: auction.ID(), SellerID: auction.SellerID(), Title: auction.Title(), Description: auction.Description(),
 			StartPrice: auction.StartPrice(), Status: auction.Status(), EndTime: auction.EndTime(),
 			CreatedAt: auction.CreatedAt(), UpdatedAt: auction.UpdatedAt(),
 		}

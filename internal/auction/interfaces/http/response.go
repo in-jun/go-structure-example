@@ -39,6 +39,7 @@ type EventHistoryResponse struct {
 func toCreateResponse(r *command.CreateResult) *Response {
 	return &Response{
 		ID:          r.ID,
+		SellerID:    r.SellerID,
 		Title:       r.Title,
 		Description: r.Description,
 		StartPrice:  r.StartPrice,
