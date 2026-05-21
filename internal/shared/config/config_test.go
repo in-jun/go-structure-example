@@ -21,7 +21,7 @@ func TestLoad_Defaults(t *testing.T) {
 		t.Errorf("expected default ShutdownTimeout 10s, got %v", AppConfig.ShutdownTimeout)
 	}
 	if AppConfig.RateLimitBurst != 200 {
-		t.Errorf("expected default RateLimitBurst 100, got %d", AppConfig.RateLimitBurst)
+		t.Errorf("expected default RateLimitBurst 200, got %d", AppConfig.RateLimitBurst)
 	}
 	if AppConfig.PGMaxOpenConns != 25 {
 		t.Errorf("expected default PGMaxOpenConns 25, got %d", AppConfig.PGMaxOpenConns)
