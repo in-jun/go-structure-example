@@ -43,7 +43,7 @@ func (c *compositePublisher) Publish(ctx context.Context, events ...domainEvent.
 				slog.Error("failed to create envelope", "component", "outbox", "error", err)
 				continue
 			}
-			if err := sharedNats.Publish(c.nc, e.EventName(), env); err != nil {
+			if err := sharedNats.PublishWithContext(ctx, c.nc, e.EventName(), env); err != nil {
 				slog.Warn("NATS publish failed, relay will retry", "component", "outbox", "event_id", eventIDs[i], "error", err)
 			}
 		}
