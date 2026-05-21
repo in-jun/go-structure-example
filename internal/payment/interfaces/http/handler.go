@@ -1,6 +1,7 @@
 package http
 
 import (
+	stderrors "errors"
 	"io"
 	"net/http"
 
@@ -69,7 +70,7 @@ func (h *Handler) RefundPayment(w http.ResponseWriter, r *http.Request) {
 	userID := server.UserID(r)
 
 	var req RefundRequest
-	if err := server.Bind(r, &req); err != nil && err != io.EOF {
+	if err := server.Bind(r, &req); err != nil && !stderrors.Is(err, io.EOF) {
 		middleware.HandleError(w, errors.BadRequest("Invalid request format"))
 		return
 	}

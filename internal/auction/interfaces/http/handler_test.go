@@ -103,7 +103,9 @@ func TestHandler_Create(t *testing.T) {
 	}
 
 	var resp Response
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
 	if resp.Title != "Test Auction" {
 		t.Errorf("expected title 'Test Auction', got '%s'", resp.Title)
 	}
@@ -148,7 +150,9 @@ func TestHandler_GetList(t *testing.T) {
 	}
 
 	var resp ListResponse
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
 	if resp.Total != 2 {
 		t.Errorf("expected total 2, got %d", resp.Total)
 	}

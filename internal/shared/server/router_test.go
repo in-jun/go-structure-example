@@ -8,7 +8,7 @@ import (
 
 func dummyHandler(tag string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(tag))
+		_, _ = w.Write([]byte(tag))
 	})
 }
 
@@ -43,7 +43,7 @@ func TestRouter_StaticRoutes(t *testing.T) {
 func TestRouter_ParamRoutes(t *testing.T) {
 	r := NewRouter()
 	r.Handle("GET /api/v1/auctions/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(r.PathValue("id")))
+		_, _ = w.Write([]byte(r.PathValue("id")))
 	}))
 
 	req := httptest.NewRequest("GET", "/api/v1/auctions/abc-123", nil)
@@ -61,10 +61,10 @@ func TestRouter_ParamRoutes(t *testing.T) {
 func TestRouter_NestedParams(t *testing.T) {
 	r := NewRouter()
 	r.Handle("GET /api/v1/auctions/{auction_id}/bids", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("auction:" + r.PathValue("auction_id")))
+		_, _ = w.Write([]byte("auction:" + r.PathValue("auction_id")))
 	}))
 	r.Handle("GET /api/v1/auctions/{auction_id}/bids/highest", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("highest:" + r.PathValue("auction_id")))
+		_, _ = w.Write([]byte("highest:" + r.PathValue("auction_id")))
 	}))
 
 	tests := []struct {
@@ -285,7 +285,7 @@ func TestRouter_EmptyParamValue(t *testing.T) {
 func TestRouter_CatchAll(t *testing.T) {
 	r := NewRouter()
 	r.Handle("GET /static/{file...}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(r.PathValue("file")))
+		_, _ = w.Write([]byte(r.PathValue("file")))
 	}))
 	r.Handle("GET /api/v1/auctions", dummyHandler("list"))
 

@@ -21,7 +21,9 @@ func TestJSON(t *testing.T) {
 	}
 
 	var body map[string]string
-	json.Unmarshal(w.Body.Bytes(), &body)
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
 	if body["key"] != "value" {
 		t.Errorf("expected 'value', got %q", body["key"])
 	}
@@ -176,7 +178,7 @@ func TestResponseWriter(t *testing.T) {
 	rw := NewResponseWriter(w)
 
 	rw.WriteHeader(http.StatusNotFound)
-	rw.Write([]byte("not found"))
+	_, _ = rw.Write([]byte("not found"))
 
 	if rw.StatusCode != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", rw.StatusCode)

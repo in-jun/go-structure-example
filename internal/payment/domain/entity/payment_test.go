@@ -86,7 +86,9 @@ func TestPayment_Fail(t *testing.T) {
 
 func TestPayment_Fail_NotPending(t *testing.T) {
 	payment, _ := NewPayment(testAuctionID, testWinnerID, 5000)
-	payment.Complete()
+	if err := payment.Complete(); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := payment.Fail("reason"); err == nil {
 		t.Error("expected error failing completed payment")

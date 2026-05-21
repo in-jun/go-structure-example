@@ -69,7 +69,7 @@ func (r *auctionRepository) FindAll(ctx context.Context, page, limit int) ([]*en
 	if err != nil {
 		return nil, 0, errors.Internal("Failed to list auctions")
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var auctions []*entity.Auction
 	var total int64

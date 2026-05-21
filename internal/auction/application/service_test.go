@@ -131,7 +131,9 @@ func TestAuctionService_Open_NotOwner(t *testing.T) {
 func TestAuctionService_Close(t *testing.T) {
 	userID := uuid.New().String()
 	auction, _ := entity.NewAuction(userID, "Test", "", 100, time.Now().Add(2*time.Hour))
-	auction.Open()
+	if err := auction.Open(); err != nil {
+		t.Fatal(err)
+	}
 	auction.ClearEvents()
 	svc := newTestService(&mockAuctionRepo{auction: auction})
 
@@ -187,8 +189,12 @@ func TestAuctionService_GetList(t *testing.T) {
 func TestAuctionService_Settle(t *testing.T) {
 	userID := uuid.New().String()
 	auction, _ := entity.NewAuction(userID, "Test", "", 100, time.Now().Add(2*time.Hour))
-	auction.Open()
-	auction.Close()
+	if err := auction.Open(); err != nil {
+		t.Fatal(err)
+	}
+	if err := auction.Close(); err != nil {
+		t.Fatal(err)
+	}
 	auction.ClearEvents()
 	svc := newTestService(&mockAuctionRepo{auction: auction})
 

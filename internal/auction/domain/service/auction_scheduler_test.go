@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -25,7 +26,7 @@ func TestAuctionScheduler_ValidateTiming(t *testing.T) {
 			if tt.wantErr == nil && err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
-			if tt.wantErr != nil && err != tt.wantErr {
+			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
 				t.Errorf("expected %v, got %v", tt.wantErr, err)
 			}
 		})

@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	stderrors "errors"
 	"time"
 
 	"google.golang.org/grpc"
@@ -67,7 +68,7 @@ func (c *AuctionClient) GetAuction(ctx context.Context, auctionID string) (*doma
 		}, nil
 	})
 	if err != nil {
-		if err == gobreaker.ErrOpenState || err == gobreaker.ErrTooManyRequests {
+		if stderrors.Is(err, gobreaker.ErrOpenState) || stderrors.Is(err, gobreaker.ErrTooManyRequests) {
 			return nil, errors.Internal("Auction service temporarily unavailable")
 		}
 		return nil, err

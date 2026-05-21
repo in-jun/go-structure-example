@@ -124,7 +124,7 @@ func TestRateLimit(t *testing.T) {
 	defer mr.Close()
 
 	rc := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	handler := RateLimit(rc, 1, 1)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -351,7 +351,7 @@ func TestTimeout_Exceeded(t *testing.T) {
 
 func TestBodyLimit_Within(t *testing.T) {
 	handler := BodyLimit(1024)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.ReadAll(r.Body)
+		_, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -393,7 +393,7 @@ func TestRetryTransport_NoRetryOnPOST(t *testing.T) {
 	rt := NewRetryTransport(ts.Client().Transport, 3)
 	req, _ := http.NewRequest("POST", ts.URL+"/create", nil)
 	resp, _ := rt.RoundTrip(req)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if calls != 1 {
 		t.Errorf("POST should not retry, expected 1 call, got %d", calls)
@@ -418,7 +418,7 @@ func TestRetryTransport_RetryOnGET(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 after retry, got %d", resp.StatusCode)
@@ -436,7 +436,7 @@ func TestRetryTransport_POSTWithIdempotencyKey(t *testing.T) {
 			w.WriteHeader(http.StatusBadGateway)
 			return
 		}
-		fmt.Fprintln(w, "ok")
+		_, _ = fmt.Fprintln(w, "ok")
 	}))
 	defer ts.Close()
 
@@ -447,7 +447,7 @@ func TestRetryTransport_POSTWithIdempotencyKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected 200, got %d", resp.StatusCode)

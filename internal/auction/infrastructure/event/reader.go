@@ -28,7 +28,7 @@ func (r *pgReader) FindByAuctionID(ctx context.Context, auctionID string) ([]dom
 	if err != nil {
 		return nil, errors.Internal("Failed to query domain events")
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var events []domainEvent.StoredEvent
 	for rows.Next() {

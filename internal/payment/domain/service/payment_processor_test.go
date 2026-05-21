@@ -62,7 +62,9 @@ func TestPaymentProcessor_ProcessRefund_Success(t *testing.T) {
 func TestPaymentProcessor_ProcessRefund_GatewayFail(t *testing.T) {
 	processor := NewPaymentProcessor(&mockGatewayFail{})
 	payment, _ := entity.NewPayment("auction-id", "winner-id", 5000)
-	payment.Complete()
+	if err := payment.Complete(); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := processor.ProcessRefund(context.Background(), payment, "test"); err == nil {
 		t.Error("expected error from gateway refund failure")

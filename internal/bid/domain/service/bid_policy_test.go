@@ -1,6 +1,9 @@
 package service
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func int64Ptr(v int64) *int64 { return &v }
 
@@ -29,7 +32,7 @@ func TestBidPolicy_Validate(t *testing.T) {
 			if tt.wantErr == nil && err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
-			if tt.wantErr != nil && err != tt.wantErr {
+			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
 				t.Errorf("expected %v, got %v", tt.wantErr, err)
 			}
 		})

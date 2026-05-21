@@ -94,7 +94,9 @@ func TestAuction_Close(t *testing.T) {
 		t.Error("expected error when closing draft auction")
 	}
 
-	auction.Open()
+	if err := auction.Open(); err != nil {
+		t.Fatal(err)
+	}
 	auction.ClearEvents()
 
 	if err := auction.Close(); err != nil {
@@ -115,8 +117,12 @@ func TestAuction_Settle(t *testing.T) {
 		t.Error("expected error when settling draft auction")
 	}
 
-	auction.Open()
-	auction.Close()
+	if err := auction.Open(); err != nil {
+		t.Fatal(err)
+	}
+	if err := auction.Close(); err != nil {
+		t.Fatal(err)
+	}
 	auction.ClearEvents()
 
 	if err := auction.Settle(); err != nil {
@@ -140,8 +146,12 @@ func TestAuction_Cancel(t *testing.T) {
 
 func TestAuction_Cancel_FromClosed(t *testing.T) {
 	auction, _ := NewAuction(testSellerID, "Test", "", 100, futureTime())
-	auction.Open()
-	auction.Close()
+	if err := auction.Open(); err != nil {
+		t.Fatal(err)
+	}
+	if err := auction.Close(); err != nil {
+		t.Fatal(err)
+	}
 	auction.ClearEvents()
 
 	if err := auction.Cancel(); err != nil {
@@ -154,7 +164,9 @@ func TestAuction_Cancel_FromClosed(t *testing.T) {
 
 func TestAuction_Cancel_FromOpen_Fails(t *testing.T) {
 	auction, _ := NewAuction(testSellerID, "Test", "", 100, futureTime())
-	auction.Open()
+	if err := auction.Open(); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := auction.Cancel(); err == nil {
 		t.Error("expected error when cancelling open auction")
@@ -163,7 +175,9 @@ func TestAuction_Cancel_FromOpen_Fails(t *testing.T) {
 
 func TestAuction_ClearEvents(t *testing.T) {
 	auction, _ := NewAuction(testSellerID, "Test", "", 100, futureTime())
-	auction.Open()
+	if err := auction.Open(); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(auction.Events()) == 0 {
 		t.Error("expected events after Open")

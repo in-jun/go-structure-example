@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	stderrors "errors"
 	"testing"
 
 	"github.com/in-jun/go-structure-example/internal/auth/domain"
@@ -81,11 +82,7 @@ func TestRegisterHandler_DuplicateEmail(t *testing.T) {
 }
 
 func asCustomError(err error, ce *errors.CustomError) bool {
-	if e, ok := err.(errors.CustomError); ok {
-		*ce = e
-		return true
-	}
-	return false
+	return stderrors.As(err, ce)
 }
 
 func TestRegisterHandler_RepositoryError(t *testing.T) {

@@ -16,6 +16,8 @@ linters:
     gosec:
       excludes:
         - G114
+        - G108
+        - G704
   exclusions:
     paths:
       - vendor

@@ -69,7 +69,7 @@ func (r *bidRepository) FindByAuctionID(ctx context.Context, auctionID string, p
 	if err != nil {
 		return nil, 0, errors.Internal("Failed to list bids")
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var bids []*entity.Bid
 	var total int64

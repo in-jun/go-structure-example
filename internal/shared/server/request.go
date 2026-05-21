@@ -14,7 +14,7 @@ func Bind(r *http.Request, v any) error {
 	if ct != "" && !strings.HasPrefix(ct, "application/json") {
 		return errUnsupportedContentType
 	}
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	return json.NewDecoder(r.Body).Decode(v)
 }
 
