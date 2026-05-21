@@ -108,7 +108,13 @@ func main() {
 		os.Exit(0)
 	}
 
-	go func() { http.ListenAndServe("localhost:6060", nil) }()
+	go func() {
+		port := os.Getenv("PPROF_PORT")
+		if port == "" {
+			port = "6065"
+		}
+		http.ListenAndServe("localhost:"+port, nil)
+	}()
 
 	config.Load()
 	logging.Init("gateway-service")
