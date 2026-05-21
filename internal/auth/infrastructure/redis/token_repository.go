@@ -32,7 +32,7 @@ func (r *tokenRepository) userKey(userID string) string {
 }
 
 func (r *tokenRepository) blacklistKey(jti string) string {
-	return fmt.Sprintf("bl:jti:%s", jti)
+	return "token_blacklist:" + jti
 }
 
 func (r *tokenRepository) Save(ctx context.Context, token *entity.RefreshToken) error {
@@ -176,7 +176,7 @@ func (r *tokenRepository) IsAccessTokenBlacklisted(ctx context.Context, jti stri
 }
 
 func (r *tokenRepository) revokedAtKey(userID string) string {
-	return fmt.Sprintf("revoked_at:user:%s", userID)
+	return "token_revoked_at:" + userID
 }
 
 func (r *tokenRepository) RevokeAllAccessTokens(ctx context.Context, userID string, ttl time.Duration) error {
