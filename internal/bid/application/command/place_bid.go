@@ -48,32 +48,25 @@ func NewPlaceBidHandler(
 }
 
 func (h *PlaceBidHandler) Handle(ctx context.Context, cmd PlaceBid) (*PlaceBidResult, error) {
-	bv, err := vo.NewBidderIDVO(cmd.UserID)
+	pv, err := vo.NewPlaceBidVO(cmd.AuctionID, cmd.UserID, cmd.Amount)
 	if err != nil {
 		return nil, errors.BadRequest(err.Error())
-	}
-	av, err := vo.NewAuctionIDVO(cmd.AuctionID)
-	if err != nil {
-		return nil, errors.BadRequest(err.Error())
-	}
-	if cmd.Amount <= 0 {
-		return nil, errors.BadRequest("Amount must be positive")
 	}
 
-	auction, err := h.auctionClient.GetAuction(ctx, av.ID)
+	auction, err := h.auctionClient.GetAuction(ctx, pv.AuctionID)
 	if err != nil {
 		return nil, err
 	}
 	if auction.Status != domain.AuctionStatusOpen {
 		return nil, errors.BadRequest("Auction is not open for bidding")
 	}
-	if auction.SellerID == bv.ID {
+	if auction.SellerID == pv.BidderID {
 		return nil, errors.Forbidden("Cannot bid on your own auction")
 	}
 
 	var result *PlaceBidResult
 	err = h.transactor.WithinTransaction(ctx, func(txCtx context.Context) error {
-		highest, err := h.bidRepo.FindHighestByAuctionID(txCtx, av.ID, query.ForUpdate())
+		highest, err := h.bidRepo.FindHighestByAuctionID(txCtx, pv.AuctionID, query.ForUpdate())
 		if err != nil {
 			return err
 		}
@@ -84,11 +77,11 @@ func (h *PlaceBidHandler) Handle(ctx context.Context, cmd PlaceBid) (*PlaceBidRe
 			highestAmount = &amt
 		}
 
-		if err := h.bidPolicy.Validate(cmd.Amount, auction.StartPrice, highestAmount); err != nil {
+		if err := h.bidPolicy.Validate(pv.Amount, auction.StartPrice, highestAmount); err != nil {
 			return errors.BadRequest(err.Error())
 		}
 
-		bid, err := entity.NewBid(av.ID, bv.ID, cmd.Amount)
+		bid, err := entity.NewBid(pv.AuctionID, pv.BidderID, pv.Amount)
 		if err != nil {
 			return errors.BadRequest(err.Error())
 		}
