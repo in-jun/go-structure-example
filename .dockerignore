@@ -1,0 +1,15 @@
+.git
+.github
+.vscode
+.idea
+*.md
+!go.md
+LICENSE
+docker-compose.yml
+Dockerfile.*
+.env*
+tmp/
+*.test
+coverage.*
+.golangci.yml
+Makefile

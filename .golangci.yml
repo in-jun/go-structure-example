@@ -1,0 +1,26 @@
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - typecheck
+    - bodyclose
+    - noctx
+    - gosec
+    - errname
+    - errorlint
+
+linters-settings:
+  gosec:
+    excludes:
+      - G114
+
+issues:
+  exclude-dirs:
+    - vendor
+    - proto
+  max-issues-per-linter: 50
+  max-same-issues: 5
