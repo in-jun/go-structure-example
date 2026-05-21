@@ -34,15 +34,18 @@ func TestNewPayment_Invariants(t *testing.T) {
 		name      string
 		auctionID string
 		winnerID  string
+		amount    int64
 	}{
-		{"empty auctionID", "", testWinnerID},
-		{"empty winnerID", testAuctionID, ""},
-		{"both empty", "", ""},
+		{"empty auctionID", "", testWinnerID, 5000},
+		{"empty winnerID", testAuctionID, "", 5000},
+		{"both empty", "", "", 5000},
+		{"zero amount", testAuctionID, testWinnerID, 0},
+		{"negative amount", testAuctionID, testWinnerID, -1},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewPayment(tt.auctionID, tt.winnerID, 5000)
+			_, err := NewPayment(tt.auctionID, tt.winnerID, tt.amount)
 			if err == nil {
 				t.Errorf("expected error for %s", tt.name)
 			}

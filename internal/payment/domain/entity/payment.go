@@ -16,10 +16,10 @@ const (
 )
 
 var (
-	errInvalidInput    = errors.New("auction ID and winner ID are required")
-	ErrNotPending      = errors.New("payment is not in pending status")
-	ErrAlreadyComplete = errors.New("payment is already completed")
-	ErrNotCompleted    = errors.New("payment is not in completed status")
+	errInvalidInput   = errors.New("auction ID and winner ID are required")
+	errInvalidAmount  = errors.New("payment amount must be positive")
+	ErrNotPending     = errors.New("payment is not in pending status")
+	ErrNotCompleted   = errors.New("payment is not in completed status")
 )
 
 type Payment struct {
@@ -35,8 +35,11 @@ type Payment struct {
 }
 
 func NewPayment(auctionID, winnerID string, amount int64) (*Payment, error) {
-	if auctionID == "" || winnerID == "" || amount <= 0 {
+	if auctionID == "" || winnerID == "" {
 		return nil, errInvalidInput
+	}
+	if amount <= 0 {
+		return nil, errInvalidAmount
 	}
 	now := time.Now()
 	p := &Payment{
