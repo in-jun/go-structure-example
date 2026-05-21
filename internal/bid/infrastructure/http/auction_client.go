@@ -5,6 +5,7 @@ import (
 	stderrors "errors"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -95,7 +96,11 @@ func (c *auctionClient) doRequest(ctx context.Context, auctionID string) (*domai
 	if err != nil {
 		return nil, errors.Internal("Failed to call auction service")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Warn("failed to close auction response body", "error", err)
+		}
+	}()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, errors.NotFound("Auction not found")

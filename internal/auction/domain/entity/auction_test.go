@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -91,7 +92,7 @@ func TestAuction_Open_ExpiredEndTime(t *testing.T) {
 	pastTime := time.Now().Add(-1 * time.Hour)
 	auction := ReconstructAuction(uuid.New().String(), testSellerID, "Test", "", 100, StatusDraft, pastTime, time.Now(), time.Now())
 
-	if err := auction.Open(); err != ErrEndTimeExpired {
+	if err := auction.Open(); !errors.Is(err, ErrEndTimeExpired) {
 		t.Errorf("expected ErrEndTimeExpired, got %v", err)
 	}
 }
