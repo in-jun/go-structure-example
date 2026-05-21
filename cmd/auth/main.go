@@ -53,7 +53,9 @@ func main() {
 		if port == "" {
 			port = "6061"
 		}
-		http.ListenAndServe("localhost:"+port, nil)
+		if err := http.ListenAndServe("localhost:"+port, nil); err != nil {
+			slog.Warn("pprof server stopped", "error", err)
+		}
 	}()
 
 	config.Load()
@@ -68,24 +70,36 @@ func main() {
 		slog.Warn("failed to init tracer", "error", err)
 	}
 	if shutdownTracer != nil {
-		defer shutdownTracer(context.Background())
+		defer func() {
+			if err := shutdownTracer(context.Background()); err != nil {
+				slog.Warn("failed to shutdown tracer", "error", err)
+			}
+		}()
 	}
 
 	db, err := database.NewPostgres()
 	if errors.Is(err, database.ErrMigrateOnly) {
-		db.Close()
+		_ = db.Close()
 		os.Exit(0)
 	}
 	if err != nil {
 		slog.Error("failed to connect to PostgreSQL", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("failed to close db", "error", err)
+		}
+	}()
 
 	redisClient := goredis.NewClient(&goredis.Options{
 		Addr: config.AppConfig.RedisURL,
 	})
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			slog.Warn("failed to close Redis client", "error", err)
+		}
+	}()
 
 	dbGetter := transaction.NewDBGetter(db)
 	transactor := transaction.NewTransactor(db)

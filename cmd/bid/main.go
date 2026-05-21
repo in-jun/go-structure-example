@@ -55,7 +55,9 @@ func main() {
 		if port == "" {
 			port = "6063"
 		}
-		http.ListenAndServe("localhost:"+port, nil)
+		if err := http.ListenAndServe("localhost:"+port, nil); err != nil {
+			slog.Warn("pprof server stopped", "error", err)
+		}
 	}()
 
 	config.Load()
@@ -70,24 +72,37 @@ func main() {
 		slog.Warn("failed to init tracer", "error", err)
 	}
 	if shutdownTracer != nil {
-		defer shutdownTracer(context.Background())
+		defer func() {
+			if err := shutdownTracer(context.Background()); err != nil {
+				slog.Warn("failed to shutdown tracer", "error", err)
+			}
+		}()
 	}
 
 	pgDB, err := database.NewPostgres()
 	if errors.Is(err, database.ErrMigrateOnly) {
-		pgDB.Close()
+		_ = pgDB.Close()
 		os.Exit(0)
 	}
 	if err != nil {
 		slog.Error("failed to connect to PostgreSQL", "error", err)
 		os.Exit(1)
 	}
-	defer pgDB.Close()
+	defer func() {
+		if err := pgDB.Close(); err != nil {
+			slog.Error("failed to close db", "error", err)
+		}
+	}()
 	nc, err := sharedNats.NewConnection()
 	if err != nil {
 		slog.Error("failed to connect to NATS", "error", err)
 		os.Exit(1)
 	}
+	defer func() {
+		if err := nc.Drain(); err != nil {
+			slog.Warn("failed to drain NATS connection", "error", err)
+		}
+	}()
 
 	dbGetter := transaction.NewDBGetter(pgDB)
 	transactor := transaction.NewTransactor(pgDB)
@@ -113,6 +128,16 @@ func main() {
 		slog.Error("failed to start NATS consumer", "error", err)
 		os.Exit(1)
 	}
+	defer func() {
+		if err := consumer.Stop(); err != nil {
+			slog.Warn("failed to stop consumer", "error", err)
+		}
+	}()
+	defer func() {
+		if err := auctionClient.Close(); err != nil {
+			slog.Warn("failed to close auction client", "error", err)
+		}
+	}()
 
 	relay := outbox.NewRelay(pgDB, nc, "bid")
 	go relay.Start(ctx)
@@ -173,10 +198,6 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("server forced to shutdown", "error", err)
 	}
-	consumer.Stop()
-	auctionClient.Close()
-	nc.Drain()
-	pgDB.Close()
 
 	slog.Info("service stopped")
 }

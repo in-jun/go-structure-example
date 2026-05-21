@@ -113,7 +113,9 @@ func main() {
 		if port == "" {
 			port = "6065"
 		}
-		http.ListenAndServe("localhost:"+port, nil)
+		if err := http.ListenAndServe("localhost:"+port, nil); err != nil {
+			slog.Warn("pprof server stopped", "error", err)
+		}
 	}()
 
 	config.Load()
@@ -128,13 +130,21 @@ func main() {
 		slog.Warn("failed to init tracer", "error", err)
 	}
 	if shutdownTracer != nil {
-		defer shutdownTracer(context.Background())
+		defer func() {
+			if err := shutdownTracer(context.Background()); err != nil {
+				slog.Warn("failed to shutdown tracer", "error", err)
+			}
+		}()
 	}
 
 	redisClient := goredis.NewClient(&goredis.Options{
 		Addr: config.AppConfig.RedisURL,
 	})
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			slog.Warn("failed to close Redis client", "error", err)
+		}
+	}()
 
 	secretKey := []byte(config.AppConfig.JWTSecret)
 	tokenValidator := middleware.TokenValidator(func(ctx context.Context, tokenString string) (*middleware.ValidateTokenResult, error) {
