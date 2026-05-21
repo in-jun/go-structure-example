@@ -19,12 +19,12 @@ linters:
         - G108
         # G404: math/rand used for retry jitter and mock payment; not a security context
         - G404
-        # G117/G710: URL built from trusted env vars (service URLs from config); not user-supplied
+        # G117: refresh token marshaled to Redis intentionally; Token field name triggers secret detection
         - G117
-        - G710
-        # G704: healthcheck URL is always "http://localhost:APP_PORT/health/ready";
-        #       APP_PORT is set by docker-compose config, not user input — SSRF flag is a false positive
+        # G704: SSRF taint — service URLs come from config env vars, not user input
         - G704
+        # G710: open redirect taint — redirect targets are internal config URLs, not user-supplied
+        - G710
   exclusions:
     rules:
       - linters:
