@@ -10,9 +10,10 @@ import (
 	"github.com/in-jun/go-structure-example/internal/bid/application/query"
 	"github.com/in-jun/go-structure-example/internal/bid/domain"
 	"github.com/in-jun/go-structure-example/internal/bid/domain/entity"
-	sharedQuery "github.com/in-jun/go-structure-example/internal/shared/query"
 	domainEvent "github.com/in-jun/go-structure-example/internal/bid/domain/event"
 	domainService "github.com/in-jun/go-structure-example/internal/bid/domain/service"
+	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	sharedQuery "github.com/in-jun/go-structure-example/internal/shared/query"
 	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
@@ -245,5 +246,27 @@ func TestBidService_GetEvents(t *testing.T) {
 	}
 	if len(result.Events) != 0 {
 		t.Errorf("expected 0 events, got %d", len(result.Events))
+	}
+}
+
+func TestBidService_GetHighest_NotFound(t *testing.T) {
+	svc := newTestService(&mockBidRepo{bid: nil}, &mockAuctionClient{})
+
+	_, err := svc.GetHighest(context.Background(), query.GetHighest{AuctionID: uuid.New().String()})
+	if err == nil {
+		t.Error("expected error when no bids exist")
+	}
+}
+
+func TestBidService_PlaceBid_AuctionNotFound(t *testing.T) {
+	svc := newTestService(&mockBidRepo{}, &mockAuctionClient{err: errors.NotFound("Auction not found")})
+
+	_, err := svc.PlaceBid(context.Background(), command.PlaceBid{
+		UserID:    uuid.New().String(),
+		AuctionID: uuid.New().String(),
+		Amount:    1000,
+	})
+	if err == nil {
+		t.Error("expected error when auction not found")
 	}
 }
