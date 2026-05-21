@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	_ "go.uber.org/automaxprocs"
 
 	"github.com/in-jun/go-structure-example/internal/auth/application"
 	"github.com/in-jun/go-structure-example/internal/auth/application/command"
@@ -44,6 +48,8 @@ func main() {
 		os.Exit(0)
 	}
 
+	go func() { http.ListenAndServe("localhost:6060", nil) }()
+
 	config.Load()
 	logging.Init("auth-service")
 
@@ -60,6 +66,10 @@ func main() {
 	}
 
 	db, err := database.NewPostgres()
+	if errors.Is(err, database.ErrMigrateOnly) {
+		db.Close()
+		os.Exit(0)
+	}
 	if err != nil {
 		slog.Error("failed to connect to PostgreSQL", "error", err)
 		os.Exit(1)

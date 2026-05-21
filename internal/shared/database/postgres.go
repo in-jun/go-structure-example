@@ -14,6 +14,8 @@ import (
 	"github.com/in-jun/go-structure-example/internal/shared/config"
 )
 
+var ErrMigrateOnly = errors.New("migrate-only: migrations complete")
+
 func NewPostgres() (*sql.DB, error) {
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		config.AppConfig.PGUsername,
@@ -42,8 +44,19 @@ func NewPostgres() (*sql.DB, error) {
 		return nil, err
 	}
 
-	if err := runMigrations(db); err != nil {
-		return nil, fmt.Errorf("migration failed: %w", err)
+	switch config.AppConfig.MigrationMode {
+	case "skip":
+		slog.Info("Migration mode: skip — skipping migrations")
+	case "migrate-only":
+		if err := runMigrations(db); err != nil {
+			return nil, fmt.Errorf("migration failed: %w", err)
+		}
+		slog.Info("Migrations complete (migrate-only mode)")
+		return db, ErrMigrateOnly
+	default:
+		if err := runMigrations(db); err != nil {
+			return nil, fmt.Errorf("migration failed: %w", err)
+		}
 	}
 
 	return db, nil

@@ -7,12 +7,15 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	_ "net/http/pprof"
 	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 	"time"
+
+	_ "go.uber.org/automaxprocs"
 
 	goredis "github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v4"
@@ -104,6 +107,8 @@ func main() {
 		}
 		os.Exit(0)
 	}
+
+	go func() { http.ListenAndServe("localhost:6060", nil) }()
 
 	config.Load()
 	logging.Init("gateway-service")
