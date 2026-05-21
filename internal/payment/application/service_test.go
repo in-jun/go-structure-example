@@ -169,3 +169,34 @@ func TestPaymentService_RefundPayment_NotOwner(t *testing.T) {
 		t.Error("expected error for non-owner refund")
 	}
 }
+
+func TestPaymentService_RefundPayment(t *testing.T) {
+	winnerID := uuid.New().String()
+	payment, _ := entity.NewPayment(uuid.New().String(), winnerID, 5000)
+	if err := payment.Complete(); err != nil {
+		t.Fatal(err)
+	}
+	payment.ClearEvents()
+
+	svc := newTestService(&mockPaymentRepo{payment: payment})
+
+	err := svc.RefundPayment(context.Background(), command.RefundPayment{
+		UserID:    winnerID,
+		PaymentID: payment.ID(),
+	})
+	if err != nil {
+		t.Fatalf("RefundPayment() error = %v", err)
+	}
+}
+
+func TestPaymentService_GetEvents(t *testing.T) {
+	svc := newTestService(&mockPaymentRepo{})
+
+	result, err := svc.GetEvents(context.Background(), query.EventHistory{PaymentID: uuid.New().String()})
+	if err != nil {
+		t.Fatalf("GetEvents() error = %v", err)
+	}
+	if len(result.Events) != 0 {
+		t.Errorf("expected 0 events, got %d", len(result.Events))
+	}
+}

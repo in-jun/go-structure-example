@@ -39,18 +39,23 @@ func TestNewAuction(t *testing.T) {
 
 func TestNewAuction_Invariants(t *testing.T) {
 	tests := []struct {
-		name     string
-		sellerID string
-		title    string
+		name       string
+		sellerID   string
+		title      string
+		startPrice int64
+		endTime    time.Time
 	}{
-		{"empty sellerID", "", "Title"},
-		{"empty title", testSellerID, ""},
-		{"both empty", "", ""},
+		{"empty sellerID", "", "Title", 1000, futureTime()},
+		{"empty title", testSellerID, "", 1000, futureTime()},
+		{"both empty", "", "", 1000, futureTime()},
+		{"zero price", testSellerID, "Title", 0, futureTime()},
+		{"negative price", testSellerID, "Title", -100, futureTime()},
+		{"past end time", testSellerID, "Title", 1000, time.Now().Add(-1 * time.Hour)},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewAuction(tt.sellerID, tt.title, "", 1000, futureTime())
+			_, err := NewAuction(tt.sellerID, tt.title, "", tt.startPrice, tt.endTime)
 			if err == nil {
 				t.Errorf("expected error for %s", tt.name)
 			}
