@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -69,14 +68,6 @@ func Load() {
 		RateLimitRPS:       parseFloat(getEnv("RATE_LIMIT_RPS", "100")),
 		RateLimitBurst:     parseInt(getEnv("RATE_LIMIT_BURST", "200")),
 	}
-}
-
-func requireEnv(key string) string {
-	value, ok := os.LookupEnv(key)
-	if !ok || value == "" {
-		log.Fatalf("required environment variable %s is not set", key)
-	}
-	return value
 }
 
 func getEnv(key, fallback string) string {
