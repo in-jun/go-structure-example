@@ -17,8 +17,8 @@ type DBTX interface {
 type IsolationLevel int
 
 const (
-	Optimistic  IsolationLevel = iota
-	Pessimistic
+	Optimistic  IsolationLevel = iota // Serializable + auto-retry on serialization failure
+	Pessimistic                       // ReadCommitted; callers must use SELECT FOR UPDATE
 )
 
 type TxOption func(*txConfig)
