@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -40,7 +41,7 @@ func NewPostgres() (*sql.DB, error) {
 	db.SetConnMaxLifetime(5 * time.Minute)
 	db.SetConnMaxIdleTime(3 * time.Minute)
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(context.Background()); err != nil {
 		return nil, err
 	}
 
@@ -63,11 +64,12 @@ func NewPostgres() (*sql.DB, error) {
 }
 
 func runMigrations(db *sql.DB) error {
-	if _, err := db.Exec("SELECT pg_advisory_lock(1)"); err != nil {
+	ctx := context.Background()
+	if _, err := db.ExecContext(ctx, "SELECT pg_advisory_lock(1)"); err != nil {
 		return fmt.Errorf("failed to acquire migration lock: %w", err)
 	}
 	defer func() {
-		if _, err := db.Exec("SELECT pg_advisory_unlock(1)"); err != nil {
+		if _, err := db.ExecContext(context.Background(), "SELECT pg_advisory_unlock(1)"); err != nil {
 			slog.Warn("failed to release migration advisory lock", "error", err)
 		}
 	}()

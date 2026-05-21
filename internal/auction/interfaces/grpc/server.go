@@ -58,7 +58,8 @@ func toGRPCError(err error) error {
 }
 
 func StartGRPCServer(port string, queries application.QueryUseCase) (func(), error) {
-	lis, err := net.Listen("tcp", ":"+port)
+	lc := net.ListenConfig{}
+	lis, err := lc.Listen(context.Background(), "tcp", ":"+port)
 	if err != nil {
 		return nil, err
 	}
