@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/in-jun/go-structure-example/internal/auth/domain"
@@ -45,14 +46,18 @@ func (h *RefreshHandler) Handle(ctx context.Context, cmd Refresh) (*RefreshResul
 			return nil, err
 		}
 		if userID != "" {
-			_ = h.tokenRepo.DeleteByUserID(ctx, userID)
+			if err := h.tokenRepo.DeleteByUserID(ctx, userID); err != nil {
+				slog.Warn("failed to revoke all user tokens", "error", err)
+			}
 			return nil, errors.Unauthorized("Token reuse detected, all sessions revoked")
 		}
 		return nil, errors.Unauthorized("Invalid refresh token")
 	}
 
 	if old.IsExpired() {
-		_ = h.tokenRepo.DeleteByToken(ctx, v.Token)
+		if err := h.tokenRepo.DeleteByToken(ctx, v.Token); err != nil {
+			slog.Warn("failed to delete expired refresh token", "error", err)
+		}
 		return nil, errors.Unauthorized("Refresh token expired")
 	}
 

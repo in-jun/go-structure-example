@@ -75,7 +75,9 @@ func isTokenBlacklisted(ctx context.Context, redisClient *goredis.Client, jti st
 	}
 	revokedCmd := pipe.Get(ctx, "token_revoked_at:"+userID)
 
-	_, _ = pipe.Exec(ctx)
+	if _, err := pipe.Exec(ctx); err != nil {
+		slog.Warn("failed to exec redis pipeline for token blacklist check", "error", err)
+	}
 
 	if jtiCmd != nil {
 		if val, err := jtiCmd.Result(); err == nil && val > 0 {
@@ -102,7 +104,14 @@ type jwtClaims struct {
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
 		resp, err := http.Get("http://localhost:" + os.Getenv("APP_PORT") + "/health/ready")
-		if err != nil || resp.StatusCode != 200 {
+		if err != nil {
+			os.Exit(1)
+		}
+		status := resp.StatusCode
+		if err := resp.Body.Close(); err != nil {
+			slog.Warn("failed to close healthcheck response body", "error", err)
+		}
+		if status != http.StatusOK {
 			os.Exit(1)
 		}
 		os.Exit(0)

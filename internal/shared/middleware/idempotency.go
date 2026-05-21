@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -36,7 +37,9 @@ func Idempotency(redisClient *redis.Client) func(http.Handler) http.Handler {
 				if json.Unmarshal(cached, &resp) == nil {
 					w.Header().Set("Content-Type", resp.ContentType)
 					w.WriteHeader(resp.StatusCode)
-					w.Write(resp.Body)
+					if _, err := w.Write(resp.Body); err != nil {
+						slog.Warn("failed to write cached response body", "error", err)
+					}
 					return
 				}
 			}

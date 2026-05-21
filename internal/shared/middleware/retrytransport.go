@@ -54,7 +54,9 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 
 		if resp != nil {
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				slog.Warn("failed to close upstream response body", "error", err)
+			}
 		}
 
 		delay := t.BaseDelay << uint(attempt-1)

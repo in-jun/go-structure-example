@@ -44,7 +44,14 @@ var (
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
 		resp, err := http.Get("http://localhost:" + os.Getenv("APP_PORT") + "/health/ready")
-		if err != nil || resp.StatusCode != 200 {
+		if err != nil {
+			os.Exit(1)
+		}
+		status := resp.StatusCode
+		if err := resp.Body.Close(); err != nil {
+			slog.Warn("failed to close healthcheck response body", "error", err)
+		}
+		if status != http.StatusOK {
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -81,7 +88,9 @@ func main() {
 
 	pgDB, err := database.NewPostgres()
 	if errors.Is(err, database.ErrMigrateOnly) {
-		_ = pgDB.Close()
+		if err := pgDB.Close(); err != nil {
+			slog.Error("failed to close db", "error", err)
+		}
 		os.Exit(0)
 	}
 	if err != nil {

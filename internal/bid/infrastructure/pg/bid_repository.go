@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	stderrors "errors"
+	"log/slog"
 	"time"
 
 	"github.com/in-jun/go-structure-example/internal/bid/domain"
@@ -69,7 +70,11 @@ func (r *bidRepository) FindByAuctionID(ctx context.Context, auctionID string, p
 	if err != nil {
 		return nil, 0, errors.Internal("Failed to list bids")
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var bids []*entity.Bid
 	var total int64

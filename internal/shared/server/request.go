@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -14,7 +15,11 @@ func Bind(r *http.Request, v any) error {
 	if ct != "" && !strings.HasPrefix(ct, "application/json") {
 		return errUnsupportedContentType
 	}
-	defer func() { _ = r.Body.Close() }()
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			slog.Warn("failed to close request body", "error", err)
+		}
+	}()
 	return json.NewDecoder(r.Body).Decode(v)
 }
 

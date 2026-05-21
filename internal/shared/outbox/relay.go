@@ -3,6 +3,7 @@ package outbox
 import (
 	"context"
 	"database/sql"
+	stderrors "errors"
 	"log/slog"
 	"strconv"
 	"time"
@@ -53,7 +54,11 @@ func (r *Relay) publishBatch(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = tx.Rollback() }()
+	defer func() {
+		if err := tx.Rollback(); err != nil && !stderrors.Is(err, sql.ErrTxDone) {
+			slog.Warn("failed to rollback transaction", "error", err)
+		}
+	}()
 
 	rows, err := tx.QueryContext(ctx,
 		"SELECT id, event_type, aggregate_id, payload, occurred_at FROM domain_events WHERE published = FALSE ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED",
@@ -61,7 +66,11 @@ func (r *Relay) publishBatch(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	for rows.Next() {
 		var (

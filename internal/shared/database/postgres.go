@@ -66,7 +66,11 @@ func runMigrations(db *sql.DB) error {
 	if _, err := db.Exec("SELECT pg_advisory_lock(1)"); err != nil {
 		return fmt.Errorf("failed to acquire migration lock: %w", err)
 	}
-	defer func() { _, _ = db.Exec("SELECT pg_advisory_unlock(1)") }()
+	defer func() {
+		if _, err := db.Exec("SELECT pg_advisory_unlock(1)"); err != nil {
+			slog.Warn("failed to release migration advisory lock", "error", err)
+		}
+	}()
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {

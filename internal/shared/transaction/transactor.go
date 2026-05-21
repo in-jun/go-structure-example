@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -117,7 +118,9 @@ func (t *pgTransactor) executeTx(ctx context.Context, level sql.IsolationLevel, 
 		return err
 	}
 	defer func() {
-		_ = tx.Rollback()
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			slog.Warn("failed to rollback transaction", "error", err)
+		}
 	}()
 
 	var hooks []func()

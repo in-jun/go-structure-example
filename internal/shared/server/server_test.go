@@ -38,7 +38,9 @@ func TestError(t *testing.T) {
 	}
 
 	var body map[string]any
-	json.Unmarshal(w.Body.Bytes(), &body)
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
 	if body["message"] != "bad input" {
 		t.Errorf("expected 'bad input', got %v", body["message"])
 	}

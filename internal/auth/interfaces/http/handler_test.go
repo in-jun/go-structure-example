@@ -106,7 +106,9 @@ func TestHandler_Login(t *testing.T) {
 	}
 
 	var resp Response
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
 	if resp.AccessToken != "access" {
 		t.Errorf("expected access token 'access', got %q", resp.AccessToken)
 	}

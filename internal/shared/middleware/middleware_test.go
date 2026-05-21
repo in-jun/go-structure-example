@@ -276,7 +276,9 @@ func TestHandleError_CustomError(t *testing.T) {
 	}
 
 	var body map[string]any
-	json.Unmarshal(w.Body.Bytes(), &body)
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
 	if body["message"] != "not found" {
 		t.Errorf("expected 'not found', got %v", body["message"])
 	}

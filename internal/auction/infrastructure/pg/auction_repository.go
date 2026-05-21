@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	stderrors "errors"
+	"log/slog"
 	"time"
 
 	"github.com/in-jun/go-structure-example/internal/auction/domain"
@@ -69,7 +70,11 @@ func (r *auctionRepository) FindAll(ctx context.Context, page, limit int) ([]*en
 	if err != nil {
 		return nil, 0, errors.Internal("Failed to list auctions")
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var auctions []*entity.Auction
 	var total int64

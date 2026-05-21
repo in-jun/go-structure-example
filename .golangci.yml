@@ -18,7 +18,12 @@ linters:
         - G114
         - G108
         - G704
+        - G117
   exclusions:
+    rules:
+      - linters:
+          - errcheck
+        path: "_test\\.go"
     paths:
       - vendor
       - proto

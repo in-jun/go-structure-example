@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/in-jun/go-structure-example/internal/auction/domain"
 	domainEvent "github.com/in-jun/go-structure-example/internal/auction/domain/event"
@@ -28,7 +29,11 @@ func (r *pgReader) FindByAuctionID(ctx context.Context, auctionID string) ([]dom
 	if err != nil {
 		return nil, errors.Internal("Failed to query domain events")
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var events []domainEvent.StoredEvent
 	for rows.Next() {
