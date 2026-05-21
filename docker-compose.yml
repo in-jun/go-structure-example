@@ -1,53 +1,229 @@
 services:
-  app:
-    build: .
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
     ports:
       - "8080:8080"
     restart: unless-stopped
     environment:
       APP_PORT: "8080"
       JWT_SECRET: "change-me-in-production"
-      JWT_ACCESS_EXPIRY: "15m"
-      JWT_REFRESH_EXPIRY: "168h"
-      PG_HOST: postgres
-      PG_PORT: "5432"
-      PG_DATABASE: app_db
-      PG_USERNAME: app
-      PG_PASSWORD: app
-      PG_MAX_OPEN_CONNS: "25"
-      PG_MAX_IDLE_CONNS: "10"
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      CORS_ALLOW_ORIGINS: "*"
-      SHUTDOWN_TIMEOUT: "10s"
-      REQUEST_TIMEOUT: "30s"
-      RATE_LIMIT_BURST: "100"
+      REDIS_URL: "redis:6379"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     healthcheck:
-      test: ["CMD", "/api", "healthcheck"]
+      test: ["CMD", "/gateway", "healthcheck"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 15s
     depends_on:
-      postgres:
+      auth:
+        condition: service_healthy
+      auction:
+        condition: service_healthy
+      bid:
+        condition: service_healthy
+      payment:
         condition: service_healthy
       redis:
         condition: service_healthy
+      jaeger:
+        condition: service_healthy
 
-  postgres:
-    image: postgres:16
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile.auth
     restart: unless-stopped
     environment:
-      POSTGRES_DB: app_db
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+      APP_PORT: "8081"
+      JWT_SECRET: "change-me-in-production"
+      JWT_ACCESS_EXPIRY: "1h"
+      JWT_REFRESH_EXPIRY: "168h"
+      PG_HOST: auth-db
+      PG_PORT: "5432"
+      PG_DATABASE: auth_db
+      PG_USERNAME: postgres
+      PG_PASSWORD: postgres
+      REDIS_URL: "redis:6379"
+      MIGRATION_PATH: /migrations
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d app_db"]
+      test: ["CMD", "/auth", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+
+  auction:
+    build:
+      context: .
+      dockerfile: Dockerfile.auction
+    restart: unless-stopped
+    environment:
+      APP_PORT: "8082"
+      PG_HOST: auction-db
+      PG_PORT: "5432"
+      PG_DATABASE: auction_db
+      PG_USERNAME: postgres
+      PG_PASSWORD: postgres
+      NATS_URL: "nats://nats:4222"
+      MIGRATION_PATH: /migrations
+      GRPC_PORT: "9090"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+    healthcheck:
+      test: ["CMD", "/auction", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      auction-db:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+
+  bid:
+    build:
+      context: .
+      dockerfile: Dockerfile.bid
+    restart: unless-stopped
+    environment:
+      APP_PORT: "8083"
+      PG_HOST: bid-db
+      PG_PORT: "5432"
+      PG_DATABASE: bid_db
+      PG_USERNAME: postgres
+      PG_PASSWORD: postgres
+      NATS_URL: "nats://nats:4222"
+      AUCTION_SERVICE_URL: "http://auction:8082"
+      AUCTION_GRPC_ADDRESS: "auction:9090"
+      MIGRATION_PATH: /migrations
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+    healthcheck:
+      test: ["CMD", "/bid", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      bid-db:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      auction:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+
+  payment:
+    build:
+      context: .
+      dockerfile: Dockerfile.payment
+    restart: unless-stopped
+    environment:
+      APP_PORT: "8084"
+      PG_HOST: payment-db
+      PG_PORT: "5432"
+      PG_DATABASE: payment_db
+      PG_USERNAME: postgres
+      PG_PASSWORD: postgres
+      NATS_URL: "nats://nats:4222"
+      MIGRATION_PATH: /migrations
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+    healthcheck:
+      test: ["CMD", "/payment", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      payment-db:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+
+  auth-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - auth-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 5
+
+  auction-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auction_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - auction-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  bid-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bid_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - bid-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  payment-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - payment-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2-alpine
+    command: ["--jetstream", "-m", "8222"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8222/healthz || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -58,5 +234,31 @@ services:
       timeout: 5s
       retries: 5
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:14269/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
 volumes:
-  postgres-data:
+  auth-data:
+  auction-data:
+  bid-data:
+  payment-data:
+  prometheus-data:

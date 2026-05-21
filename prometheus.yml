@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: gateway
+    static_configs:
+      - targets: ["gateway:8080"]
+  - job_name: auth
+    static_configs:
+      - targets: ["auth:8084"]
+  - job_name: auction
+    static_configs:
+      - targets: ["auction:8081"]
+  - job_name: bid
+    static_configs:
+      - targets: ["bid:8082"]
+  - job_name: payment
+    static_configs:
+      - targets: ["payment:8083"]
