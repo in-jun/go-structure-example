@@ -19,10 +19,12 @@ linters:
         - G108
         # G404: math/rand used for retry jitter and mock payment; not a security context
         - G404
-        # G117/G710: URL built from trusted env vars (APP_PORT, service URLs from config);
-        #            not user-supplied, SSRF flag is a false positive here
+        # G117/G710: URL built from trusted env vars (service URLs from config); not user-supplied
         - G117
         - G710
+        # G704: healthcheck URL is always "http://localhost:APP_PORT/health/ready";
+        #       APP_PORT is set by docker-compose config, not user input — SSRF flag is a false positive
+        - G704
   exclusions:
     rules:
       - linters:

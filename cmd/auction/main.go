@@ -65,7 +65,13 @@ func main() {
 		if port == "" {
 			port = "6062"
 		}
-		if err := http.ListenAndServe("localhost:"+port, nil); err != nil {
+		pprofSrv := &http.Server{
+			Addr:         "localhost:" + port,
+			ReadTimeout:  30 * time.Second,
+			WriteTimeout: 30 * time.Second,
+			IdleTimeout:  60 * time.Second,
+		}
+		if err := pprofSrv.ListenAndServe(); err != nil {
 			slog.Warn("pprof server stopped", "error", err)
 		}
 	}()
