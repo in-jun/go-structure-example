@@ -215,6 +215,35 @@ func TestAuctionService_Cancel(t *testing.T) {
 	}
 }
 
+func TestAuctionService_Cancel_ByOwner(t *testing.T) {
+	ownerID := uuid.New().String()
+	auction, _ := entity.NewAuction(ownerID, "Test", "", 100, time.Now().Add(2*time.Hour))
+	svc := newTestService(&mockAuctionRepo{auction: auction})
+
+	err := svc.Cancel(context.Background(), command.Cancel{
+		UserID:    ownerID,
+		AuctionID: auction.ID(),
+	})
+	if err != nil {
+		t.Fatalf("Cancel() by owner error = %v", err)
+	}
+}
+
+func TestAuctionService_Cancel_NotOwner(t *testing.T) {
+	ownerID := uuid.New().String()
+	otherID := uuid.New().String()
+	auction, _ := entity.NewAuction(ownerID, "Test", "", 100, time.Now().Add(2*time.Hour))
+	svc := newTestService(&mockAuctionRepo{auction: auction})
+
+	err := svc.Cancel(context.Background(), command.Cancel{
+		UserID:    otherID,
+		AuctionID: auction.ID(),
+	})
+	if err == nil {
+		t.Error("expected error for non-owner cancellation")
+	}
+}
+
 func TestAuctionService_GetEvents(t *testing.T) {
 	svc := newTestService(&mockAuctionRepo{})
 

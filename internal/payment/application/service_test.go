@@ -117,3 +117,55 @@ func TestPaymentService_GetPayment(t *testing.T) {
 		t.Errorf("Amount = %d, want 5000", result.Amount)
 	}
 }
+
+func TestPaymentService_GetPayment_ByOwner(t *testing.T) {
+	now := time.Now()
+	winnerID := uuid.New().String()
+	payment := entity.ReconstructPayment(uuid.New().String(), uuid.New().String(), winnerID, 5000, entity.StatusPending, now, now)
+	svc := newTestService(&mockPaymentRepo{payment: payment})
+
+	result, err := svc.GetPayment(context.Background(), query.GetPayment{
+		PaymentID: payment.ID(),
+		UserID:    winnerID,
+	})
+	if err != nil {
+		t.Fatalf("GetPayment() by owner error = %v", err)
+	}
+	if result.Amount != 5000 {
+		t.Errorf("Amount = %d, want 5000", result.Amount)
+	}
+}
+
+func TestPaymentService_GetPayment_NotOwner(t *testing.T) {
+	now := time.Now()
+	winnerID := uuid.New().String()
+	payment := entity.ReconstructPayment(uuid.New().String(), uuid.New().String(), winnerID, 5000, entity.StatusPending, now, now)
+	svc := newTestService(&mockPaymentRepo{payment: payment})
+
+	_, err := svc.GetPayment(context.Background(), query.GetPayment{
+		PaymentID: payment.ID(),
+		UserID:    uuid.New().String(),
+	})
+	if err == nil {
+		t.Error("expected error for non-owner")
+	}
+}
+
+func TestPaymentService_RefundPayment_NotOwner(t *testing.T) {
+	winnerID := uuid.New().String()
+	payment, _ := entity.NewPayment(uuid.New().String(), winnerID, 5000)
+	if err := payment.Complete(); err != nil {
+		t.Fatal(err)
+	}
+	payment.ClearEvents()
+
+	svc := newTestService(&mockPaymentRepo{payment: payment})
+
+	err := svc.RefundPayment(context.Background(), command.RefundPayment{
+		UserID:    uuid.New().String(),
+		PaymentID: payment.ID(),
+	})
+	if err == nil {
+		t.Error("expected error for non-owner refund")
+	}
+}

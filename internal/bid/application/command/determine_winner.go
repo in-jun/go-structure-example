@@ -6,6 +6,7 @@ import (
 	"github.com/in-jun/go-structure-example/internal/bid/domain"
 	"github.com/in-jun/go-structure-example/internal/bid/domain/event"
 	"github.com/in-jun/go-structure-example/internal/shared/errors"
+	"github.com/in-jun/go-structure-example/internal/shared/query"
 	"github.com/in-jun/go-structure-example/internal/shared/transaction"
 )
 
@@ -25,7 +26,7 @@ func NewDetermineWinnerHandler(bidRepo domain.BidRepository, eventPublisher doma
 
 func (h *DetermineWinnerHandler) Handle(ctx context.Context, cmd DetermineWinner) error {
 	return h.transactor.WithinTransaction(ctx, func(txCtx context.Context) error {
-		highest, err := h.bidRepo.FindHighestByAuctionID(txCtx, cmd.AuctionID)
+		highest, err := h.bidRepo.FindHighestByAuctionID(txCtx, cmd.AuctionID, query.ForUpdate())
 		if err != nil {
 			return err
 		}
