@@ -116,12 +116,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if pathNeedsClean(p) {
 		cp := path.Clean(p)
 		if cp != p {
-			u := *req.URL
-			u.Path = cp
-			http.Redirect(w, req, u.String(), http.StatusMovedPermanently)
-			return
+			req.URL.Path = cp
 		}
-		p = cp
+		p = req.URL.Path
 	}
 
 	target := r
@@ -149,8 +146,10 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (r *Router) serveMiss(w http.ResponseWriter, req *http.Request, p string) {
 	if tsPath := trailingSlashAlternate(p); tsPath != "" {
 		if root := r.getTree(req.Method); root != nil {
-			if h, _ := root.search(tsPath, nil); h != nil {
-				http.Redirect(w, req, tsPath, http.StatusMovedPermanently)
+			if h, pat := root.search(tsPath, req); h != nil {
+				req.URL.Path = tsPath
+				req.Pattern = pat
+				h.ServeHTTP(w, req)
 				return
 			}
 		}

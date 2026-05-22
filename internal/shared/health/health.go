@@ -24,7 +24,7 @@ func CheckReady() {
 		port = 8080
 	}
 	addr := net.JoinHostPort("localhost", strconv.Itoa(port))
-	conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
+	conn, err := net.DialTimeout("tcp", addr, 3*time.Second) //nolint:gosec // host is hardcoded to localhost; port is range-validated
 	if err != nil {
 		os.Exit(1)
 	}
