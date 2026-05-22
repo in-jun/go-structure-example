@@ -313,25 +313,31 @@ func TestRouter_CatchAll(t *testing.T) {
 	}
 }
 
-func TestRouter_TrailingSlashRedirect(t *testing.T) {
+func TestRouter_TrailingSlashFallback(t *testing.T) {
 	r := NewRouter()
 	r.Handle("GET /api/v1/auctions", dummyHandler("list"))
 	r.Handle("GET /health/", dummyHandler("health"))
 
-	// /api/v1/auctions/ → 301 to /api/v1/auctions
+	// /api/v1/auctions/ → serves handler for /api/v1/auctions (200, no redirect)
 	req := httptest.NewRequest("GET", "/api/v1/auctions/", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 301 {
-		t.Errorf("trailing slash: got %d, want 301", w.Code)
+	if w.Code != 200 {
+		t.Errorf("trailing slash: got %d, want 200", w.Code)
+	}
+	if body := w.Body.String(); body != "list" {
+		t.Errorf("trailing slash body: got %q, want %q", body, "list")
 	}
 
-	// /health → 301 to /health/
+	// /health → serves handler for /health/ (200, no redirect)
 	req = httptest.NewRequest("GET", "/health", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 301 {
-		t.Errorf("missing slash: got %d, want 301", w.Code)
+	if w.Code != 200 {
+		t.Errorf("missing slash: got %d, want 200", w.Code)
+	}
+	if body := w.Body.String(); body != "health" {
+		t.Errorf("missing slash body: got %q, want %q", body, "health")
 	}
 }
 
@@ -339,20 +345,20 @@ func TestRouter_PathClean(t *testing.T) {
 	r := NewRouter()
 	r.Handle("GET /api/v1/auctions", dummyHandler("list"))
 
-	// /../api/v1/auctions → 301 redirect to /api/v1/auctions
+	// /../api/v1/auctions → cleans path in-place and serves (200, no redirect)
 	req := httptest.NewRequest("GET", "/api/v1/../v1/auctions", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 301 {
-		t.Errorf("path clean: got %d, want 301", w.Code)
+	if w.Code != 200 {
+		t.Errorf("path clean: got %d, want 200", w.Code)
 	}
 
-	// //api//v1//auctions → 301 redirect
+	// //api//v1//auctions → cleans path in-place and serves (200, no redirect)
 	req = httptest.NewRequest("GET", "//api//v1//auctions", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 301 {
-		t.Errorf("double slash: got %d, want 301", w.Code)
+	if w.Code != 200 {
+		t.Errorf("double slash: got %d, want 200", w.Code)
 	}
 }
 
