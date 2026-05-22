@@ -1,8 +1,9 @@
 package middleware
 
 import (
+	"crypto/rand"
 	"log/slog"
-	"math/rand/v2"
+	"math/big"
 	"net/http"
 	"time"
 )
@@ -48,6 +49,7 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return resp, err
 	}
 
+	delay := t.BaseDelay
 	for attempt := 1; attempt <= t.MaxRetries; attempt++ {
 		if err == nil && !isRetryable(resp.StatusCode) {
 			return resp, nil
@@ -59,18 +61,17 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 			}
 		}
 
-		delay := t.BaseDelay << uint(attempt-1)
-		jitter := time.Duration(rand.Int64N(int64(delay / 2)))
-		delay = delay + jitter
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(delay/2)))
+		sleepTime := delay + time.Duration(n.Int64())
 
 		slog.Warn("upstream request failed, retrying",
 			"attempt", attempt,
 			"max_retries", t.MaxRetries,
-			"delay", delay,
+			"delay", sleepTime,
 			"error", err,
 		)
 
-		timer := time.NewTimer(delay)
+		timer := time.NewTimer(sleepTime)
 		select {
 		case <-req.Context().Done():
 			timer.Stop()
@@ -79,6 +80,7 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 
 		resp, err = t.Base.RoundTrip(req)
+		delay *= 2
 	}
 
 	return resp, err

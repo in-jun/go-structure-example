@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -43,39 +42,10 @@ var (
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://localhost:"+os.Getenv("APP_PORT")+"/health/ready", nil)
-		if err != nil {
-			os.Exit(1)
-		}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			os.Exit(1)
-		}
-		status := resp.StatusCode
-		if err := resp.Body.Close(); err != nil {
-			slog.Warn("failed to close healthcheck response body", "error", err)
-		}
-		if status != http.StatusOK {
-			os.Exit(1)
-		}
-		os.Exit(0)
+		health.CheckReady()
 	}
 
-	go func() {
-		port := os.Getenv("PPROF_PORT")
-		if port == "" {
-			port = "6064"
-		}
-		pprofSrv := &http.Server{
-			Addr:         "localhost:" + port,
-			ReadTimeout:  30 * time.Second,
-			WriteTimeout: 30 * time.Second,
-			IdleTimeout:  60 * time.Second,
-		}
-		if err := pprofSrv.ListenAndServe(); err != nil {
-			slog.Warn("pprof server stopped", "error", err)
-		}
-	}()
+	go observability.StartPprofServer()
 
 	config.Load()
 	logging.Init("payment-service")

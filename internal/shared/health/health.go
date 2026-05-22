@@ -3,13 +3,45 @@ package health
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	goredis "github.com/go-redis/redis/v8"
 	"github.com/in-jun/go-structure-example/internal/shared/server"
 	"github.com/nats-io/nats.go"
 )
+
+// CheckReady performs a health check against the service's /health/ready endpoint.
+// It reads APP_PORT from the environment and validates it as an integer to ensure
+// the URL is constructed from a known-safe value (not a raw user-controlled string).
+func CheckReady() {
+	portStr := os.Getenv("APP_PORT")
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port <= 0 || port > 65535 {
+		port = 8080
+	}
+	url := fmt.Sprintf("http://localhost:%d/health/ready", port)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		os.Exit(1)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		os.Exit(1)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
 
 type Checker struct {
 	db        *sql.DB

@@ -12,17 +12,6 @@ linters:
     - gosec
     - errname
     - errorlint
-  settings:
-    gosec:
-      excludes:
-        # G108: pprof registered on DefaultServeMux — all cmd/* bind it to "localhost:" only
-        - G108
-        # G404: math/rand used for retry jitter and mock payment; not a security context
-        - G404
-        # G704: SSRF taint — service URLs come from config env vars, not user input
-        - G704
-        # G710: open redirect taint — redirect targets are internal config URLs, not user-supplied
-        - G710
   exclusions:
     rules:
       - linters:
